@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Desbloqueio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='desbloqueio.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="cartao-glass">
+        
+        <nav class="menu-navegacao">
+            <a href="#" class="active">
+                <i class="fa-solid fa-unlock-keyhole"></i> DESBLOQUEIO
+            </a>
+            <a href="{{ url_for('admin_usuarios') }}">
+                <i class="fa-solid fa-users-gear"></i> USUÁRIOS
+            </a>
+            <a href="{{ url_for('login') }}">
+                <i class="fa-solid fa-power-off"></i> SAIR
+            </a>
+        </nav>
+
+        <div class="secao-cabecalho">
+            <h2>Central de Desbloqueio</h2>
+            <p>Analise de ID com IP para controle e desbloqueio.</p>
+        </div>
+
+        <form action="{{ url_for('finalizar_desbloqueio') }}" method="POST" class="formulario-desbloqueio">
+            
+            <div class="linha-entrada">
+                <div class="grupo-entrada campo-id">
+                    <i class="fa-solid fa-id-badge"></i>
+                    <input type="text" name="id_usuario" id="id_usuario" placeholder="ID do Usuário" required>
+                </div>
+                
+                <button type="button" class="botao-amarelo-sincronizar" onclick="sincronizarIP()" title="Sincronizar IP do usuario.">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </div>
+
+            <div class="grupo-entrada apenas-leitura">
+                <i class="fa-solid fa-network-wired"></i>
+                <input type="text" id="ip_identificado" placeholder="IP Identificado" readonly>
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-bars-staggered"></i>
+                <textarea name="motivo" placeholder="Justificativa do acesso/desbloqueio..." rows="4" required></textarea>
+            </div>
+
+            <button type="submit" class="botao-azul-finalizar">REALIZAR DESBLOQUEIO</button>
+        </form>
+
+        <div class="rodape-status">
+            <p>MODO ADMINISTRADOR</p>
+        </div>
+    </div>
+
+    <script>
+    function sincronizarIP() {
+        const id = document.getElementById('id_usuario').value;
+        const ipField = document.getElementById('ip_identificado');
+
+        if (!id) {
+            alert("Por favor, digite o ID do usuário primeiro.");
+            return;
+        }
+
+        // Faz a chamada para a rota Python que você criou
+        fetch('/buscar_ip_bloqueio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            ipField.value = data.ip;
+            // Atualizado: alterado de 'flash-highlight' para 'destaque-alerta' para casar com o CSS novo
+            ipField.classList.add('destaque-alerta'); 
+            setTimeout(() => ipField.classList.remove('destaque-alerta'), 1000);
+        })
+        .catch(err => {
+            console.error('Erro:', err);
+            alert("Erro ao buscar IP no banco de dados.");
+        });
+    }
+    </script>
+</body>
+</html>

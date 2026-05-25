@@ -1,0 +1,131 @@
+/* ============================================================
+   ESTRUTURA BASE (NEXUS CORE DESIGN)
+   ============================================================ */
+* { 
+    margin: 0; padding: 0; box-sizing: border-box; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+}
+
+body {
+    height: 100vh; display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
+    overflow: hidden;
+}
+
+/* Traduzido: .glass-card -> .cartao-glass */
+.cartao-glass {
+    width: 850px; padding: 40px; 
+    background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(25px);
+    border-radius: 45px; border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;
+}
+
+/* ============================================================
+   NAVEGAÇÃO E CABEÇALHO
+   ============================================================ */
+/* Traduzido: .admin-nav -> .menu-navegacao */
+.menu-navegacao { 
+    display: flex; justify-content: space-around; 
+    background: rgba(0,0,0,0.3); padding: 12px; 
+    border-radius: 20px; margin-bottom: 25px; 
+}
+
+.menu-navegacao a { 
+    color: #ffffff !important; text-decoration: none; 
+    font-size: 11px; font-weight: bold; opacity: 0.6; 
+    transition: 0.3s;
+}
+
+.menu-navegacao a.active, .menu-navegacao a:hover { 
+    opacity: 1; border-bottom: 2px solid #ffffff; 
+}
+
+h2 { color: #ffffff; font-size: 24px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+p { color: rgba(255, 255, 255, 0.8); font-size: 12px; margin-bottom: 25px; }
+
+/* ============================================================
+   AÇÕES (BOTÃO ADICIONAR)
+   ============================================================ */
+/* Traduzido: .action-bar -> .barra-acoes */
+.barra-acoes { display: flex; justify-content: flex-end; margin-bottom: 15px; }
+
+/* Traduzido: .yellow-btn-add -> .botao-amarelo-adicionar */
+.botao-amarelo-adicionar {
+    background: #ffcc00 !important; color: #000000 !important;
+    border: none; border-radius: 10px; padding: 10px 22px;
+    font-weight: bold; font-size: 11px; cursor: pointer; 
+    transition: 0.3s; text-transform: uppercase;
+}
+
+.botao-amarelo-adicionar:hover { 
+    transform: scale(1.05); 
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.5); 
+}
+
+/* ============================================================
+   TABELA DE DADOS
+   ============================================================ */
+/* Traduzido: .admin-table-container -> .container-tabela */
+.container-tabela { 
+    background: rgba(0,0,0,0.25); border-radius: 20px; 
+    overflow: hidden; border: 1px solid rgba(255,255,255,0.05); 
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+thead th { 
+    background: rgba(255, 255, 255, 0.1); color: #ffffff; 
+    padding: 18px; font-size: 11px; text-transform: uppercase; 
+    letter-spacing: 1px; text-align: center;
+}
+
+/* Traduzido: .white-text -> .texto-branco */
+.texto-branco { 
+    color: #ffffff !important; padding: 15px; 
+    font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+}
+
+/* Badges de Perfil */
+/* Traduzido: .badge -> .selo-perfil */
+.selo-perfil { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+.selo-perfil.admin { background: #4a54c9; color: #ffffff; box-shadow: 0 0 10px rgba(74, 84, 201, 0.3); }
+.selo-perfil.common { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
+
+/* ============================================================
+   SISTEMA DE STATUS NEON (DEDO-DURO DE IP)
+   ============================================================ */
+/* Traduzido: .status-container -> .caixa-status */
+.caixa-status {
+    display: inline-flex; align-items: center;
+    gap: 8px; background: rgba(0,0,0,0.2);
+    padding: 6px 12px; border-radius: 15px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Traduzido: .status-dot -> .ponto-status */
+.ponto-status { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Traduzido: .dot-active -> .ponto-ativo (Bolinha Verde) */
+.ponto-ativo { 
+    background-color: #2ed573; 
+    box-shadow: 0 0 10px #2ed573; 
+}
+
+/* Traduzido: .dot-blocked -> .ponto-bloqueado (Bolinha Vermelha) */
+.ponto-bloqueado { 
+    background-color: #ff4757; 
+    box-shadow: 0 0 10px #ff4757; 
+}
+
+/* Traduzido: .status-text -> .texto-status */
+.texto-status {
+    font-family: 'Consolas', 'Monaco', monospace; /* Fonte estilo terminal para o IP */
+    font-size: 11px; font-weight: bold;
+    color: #ffffff; letter-spacing: 0.5px;
+}
+
+/* Traduzido: .text-blocked -> .texto-bloqueado */
+.texto-bloqueado { color: #ff4757; opacity: 1; }
+
+/* Traduzido: .footer-status -> .rodape-status */
+.rodape-status { margin-top: 25px; font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }

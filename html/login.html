@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="cartao-glass">
+        <div class="secao-cabecalho">
+            <div class="icone-perfil">
+                <i class="fa-solid fa-user-lock"></i> 
+            </div>
+            <h2>Acesso Restrito</h2>
+            <p>Identificação de acesso</p>
+        </div>
+
+        <form action="/login" method="POST">
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" 
+                       name="email" 
+                       id="inputEmail" 
+                       placeholder="E-mail" 
+                       value="{{ email_digitado if email_digitado else '' }}" 
+                       required>
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-key"></i>
+                <input type="password" name="senha" id="inputSenha" placeholder="Senha" required>
+            </div>
+
+            <button type="submit" id="btn-login" class="botao-login">ENTRAR</button>
+            
+            <div class="rodape-login">
+                <a href="/recuperacao" class="link-esqueceu">Esqueceu a senha?</a>
+            </div>
+        </form>
+
+        <div class="secao-cadastro">
+            <p>Não possui conta? <a href="/cadastro">Cadastrar</a></p>
+        </div>
+    </div>
+
+    {% if erro or bloqueado %}
+    <div id="modalErro" class="fundo-modal">
+        <div class="balao-glass">
+            {% if bloqueado %}
+                <i class="fa-solid fa-user-lock" style="color: #ff3e3e;"></i>
+                <h3>Acesso Bloqueado</h3>
+                <p>Esta conta foi suspensa por excesso de tentativas. <br><strong>Entre em contato com o suporte técnico.</strong></p>
+            {% else %}
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h3>Senha Incorreta</h3>
+                <p>As credenciais informadas não coincidem com nossos banco de dados. Faça o cadastro para acessar ou entre em contato com o administrador.</p>
+            {% endif %}
+            
+            <button onclick="liberarAcesso()" class="botao-concordo">Concordo</button>
+        </div>
+    </div> 
+    {% endif %}
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // --- 1. LÓGICA DO BALÃO ---
+        // Atualizado para buscar a classe .balao-glass
+        const balao = document.querySelector('.balao-glass');
+        const inputEmail = document.getElementById('inputEmail');
+        const inputSenha = document.getElementById('inputSenha');
+
+        if (balao) {
+            // Atualizado para as novas classes de posição em português do login.css
+            const posicoes = ['posicao-centro', 'posicao-superior-esquerda', 'posicao-superior-direita', 'posicao-inferior-esquerda', 'posicao-inferior-direita'];
+            const sorteio = Math.floor(Math.random() * posicoes.length);
+            balao.classList.add(posicoes[sorteio]);
+
+            // Trava os campos para a demonstração
+            if (inputEmail) inputEmail.disabled = true;
+            if (inputSenha) {
+                inputSenha.disabled = true;
+                inputSenha.value = '';
+            }
+        }
+
+        // --- 2. TRAVA DE 10 SEGUNDOS ---
+        const deveTravar = "{{ trava_demo }}"; 
+
+        if (deveTravar === "True") {
+            const botaoLogin = document.getElementById('btn-login');
+            if (botaoLogin) {
+                let contagem = 10;
+                botaoLogin.disabled = true;
+                botaoLogin.style.opacity = "0.6";
+                botaoLogin.style.filter = "grayscale(100%)";
+                botaoLogin.style.cursor = "not-allowed";
+
+                const timer = setInterval(() => {
+                    botaoLogin.innerText = `AGUARDE (${contagem}s)`;
+                    contagem--;
+
+                    if (contagem < 0) {
+                        clearInterval(timer);
+                        botaoLogin.disabled = false;
+                        botaoLogin.style.opacity = "1";
+                        botaoLogin.style.filter = "none";
+                        botaoLogin.style.cursor = "pointer";
+                        botaoLogin.innerText = "ENTRAR";
+                    }
+                }, 1000);
+            }
+        }
+    });
+
+    // --- 3. FUNÇÃO DE LIBERAÇÃO ---
+    function liberarAcesso() {
+        const modal = document.getElementById('modalErro');
+        const email = document.getElementById('inputEmail');
+        const senha = document.getElementById('inputSenha');
+
+        if (modal) modal.style.display = 'none';
+        if (email) email.disabled = false;
+        if (senha) {
+            senha.disabled = false;
+            senha.value = '';
+            senha.focus();
+        }
+    }
+</script>
+
+</body>
+</html>

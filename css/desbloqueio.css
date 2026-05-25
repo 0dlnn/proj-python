@@ -1,0 +1,79 @@
+/* ============================================================
+   ESTRUTURA BASE (NEXUS CORE DESIGN)
+   ============================================================ */
+* { 
+    margin: 0; padding: 0; box-sizing: border-box; 
+    font-family: 'Segoe UI', sans-serif; 
+}
+
+body {
+    height: 100vh; display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
+}
+
+/* Traduzido: .glass-card -> .cartao-glass */
+.cartao-glass {
+    width: 500px; padding: 40px;
+    background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(25px);
+    border-radius: 45px; border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;
+}
+
+/* Navegação */
+/* Traduzido: .admin-nav -> .menu-navegacao */
+.menu-navegacao { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 20px; margin-bottom: 25px; }
+.menu-navegacao a { color: #ffffff !important; text-decoration: none; font-size: 11px; font-weight: bold; opacity: 0.6; transition: 0.3s; }
+.menu-navegacao a.active { opacity: 1; border-bottom: 2px solid #ffffff; }
+
+h2 { color: #ffffff; font-size: 22px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+p { color: rgba(255, 255, 255, 0.7); font-size: 11px; margin-bottom: 30px; }
+
+/* Inputs e Grupos */
+/* Traduzido: .unlock-form -> .formulario-desbloqueio */
+.formulario-desbloqueio { display: flex; flex-direction: column; gap: 15px; }
+
+/* Traduzido: .input-row -> .linha-entrada */
+.linha-entrada { display: flex; align-items: center; gap: 10px; }
+
+/* Traduzido: .input-group -> .grupo-entrada */
+.grupo-entrada {
+    background: rgba(255, 255, 255, 0.05); border-radius: 12px;
+    padding: 12px 15px; display: flex; align-items: center; gap: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1); width: 100%;
+}
+
+/* Traduzido: .id-field -> .campo-id */
+.campo-id { flex: 1; }
+
+.grupo-entrada i { color: #ffffff; opacity: 0.7; font-size: 14px; }
+
+.grupo-entrada input, .grupo-entrada textarea {
+    background: none; border: none; color: white; width: 100%; outline: none; font-size: 13px;
+}
+
+/* Traduzido: .read-only -> .apenas-leitura */
+.apenas-leitura { background: rgba(0, 0, 0, 0.2); border: 1px dashed rgba(255, 255, 255, 0.2); }
+
+/* Botão Amarelo Sync */
+/* Traduzido: .yellow-btn-sync -> .botao-amarelo-sincronizar */
+.botao-amarelo-sincronizar {
+    background: #ffcc00; color: #000; border: none; width: 45px; height: 45px;
+    border-radius: 12px; cursor: pointer; transition: 0.3s; font-size: 16px;
+}
+.botao-amarelo-sincronizar:hover { transform: rotate(180deg) scale(1.1); box-shadow: 0 0 15px rgba(255, 204, 0, 0.4); }
+
+/* Botão Finalizar Azul */
+/* Traduzido: .blue-btn-final -> .botao-azul-finalizar */
+.botao-azul-finalizar {
+    margin-top: 10px; background: #4a54c9; color: white; border: none;
+    padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer;
+    transition: 0.3s; letter-spacing: 1px;
+}
+.botao-azul-finalizar:hover { background: #3b44a3; box-shadow: 0 0 20px rgba(74, 84, 201, 0.5); transform: translateY(-2px); }
+
+/* Efeito de destaque no IP */
+/* Traduzido: .flash-highlight -> .destaque-alerta */
+.destaque-alerta { border-color: #ffcc00 !important; background: rgba(255, 204, 0, 0.1) !important; }
+
+/* Traduzido: .footer-status -> .rodape-status */
+.rodape-status { margin-top: 30px; font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }

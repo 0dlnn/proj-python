@@ -1,0 +1,89 @@
+/* ============================================================
+   RESET E FUNDO (NEXUS CORE DESIGN)
+   ============================================================ */
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
+}
+
+/* ============================================================
+   CARD PRINCIPAL
+   ============================================================ */
+/* Traduzido: .glass-card -> .cartao-glass */
+.cartao-glass {
+    width: 420px;
+    padding: 30px 40px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border-radius: 45px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    text-align: center;
+}
+
+/* ============================================================
+   NAVEGAÇÃO E TEXTOS
+   ============================================================ */
+/* Traduzido: .admin-nav -> .menu-navegacao */
+.menu-navegacao {
+    display: flex; justify-content: space-around;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px; border-radius: 20px; margin-bottom: 25px;
+}
+
+.menu-navegacao a {
+    color: #ffffff !important;
+    text-decoration: none; font-size: 11px; font-weight: bold;
+}
+
+/* Traduzido as classes de texto: .welcome-msg -> .mensagem-boas-vindas | .instruction -> .texto-instrucao */
+.mensagem-boas-vindas, h2, .texto-instrucao, .grupo-entrada i {
+    color: #ffffff !important;
+}
+
+/* Traduzido: .profile-icon -> .icone-perfil */
+.icone-perfil { font-size: 40px; color: #ffffff; margin-bottom: 15px; }
+
+/* ============================================================
+   BARRAS DE ENTRADA E BOTÕES
+   ============================================================ */
+/* Traduzido: .input-group -> .grupo-entrada */
+.grupo-entrada {
+    display: flex; align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px; margin-bottom: 15px;
+    padding: 8px 15px; border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* INPUTS (LETRAS BRANCAS QUE VOCÊ DIGITA) */
+.grupo-entrada input, .grupo-entrada textarea {
+    background: none; border: none; outline: none;
+    color: #ffffff !important; /* FORÇA BRANCO */
+    font-size: 14px; flex: 1; /* EMPURRA O BOTÃO AMARELO P/ DIREITA */
+}
+
+/* BOTÃO AMARELO NO CANTO DIREITO */
+/* Traduzido: .yellow-btn -> .botao-amarelo-acao */
+.botao-amarelo-acao {
+    background-color: #ffcc00 !important;
+    color: #000000 !important; /* ÍCONE PRETO NO FUNDO AMARELO */
+    border: none; border-radius: 8px;
+    width: 40px; height: 35px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; margin-left: 10px;
+}
+
+/* BOTÃO DE FINALIZAR */
+/* Traduzido: .unlock-btn -> .botao-finalizar-desbloqueio */
+.botao-finalizar-desbloqueio {
+    width: 100%; padding: 15px;
+    background: linear-gradient(to right, #4a54c9, #3e0b2e);
+    border: none; border-radius: 15px;
+    color: #ffffff; font-weight: bold; cursor: pointer;
+}

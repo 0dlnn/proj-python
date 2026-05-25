@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='administrador.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="cartao-glass">
+        
+        <nav class="menu-navegacao">
+            <a href="{{ url_for('admin_desbloqueio') }}" class="active">
+                <i class="fa-solid fa-unlock-keyhole"></i> DESBLOQUEIO
+            </a>
+            <a href="{{ url_for('admin_usuarios') }}">
+                <i class="fa-solid fa-users-gear"></i> USUÁRIOS
+            </a>
+            <a href="{{ url_for('login') }}" class="logout-link">
+                <i class="fa-solid fa-power-off"></i> SAIR
+            </a>
+        </nav>
+
+        <div class="secao-cabecalho">
+            <p class="mensagem-boas-vindas">Operador: {{ session['user_nome'] if 'user_nome' in session else 'Admin' }}</p>
+            <div class="icone-perfil">
+                <i class="fa-solid fa-shield-halved"></i> 
+            </div>
+            <h2>Central de Desbloqueio</h2>
+            <p class="texto-instrucao">Sincronize o ID para validar o IP de origem.</p>
+        </div>
+
+        <form id="unlockForm" action="/processar-desbloqueio" method="POST">
+            
+            <input type="hidden" id="num_bloqueio_input" name="num_bloqueio_input">
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-id-badge"></i>
+                <input type="text" id="id_usuario" name="id_usuario" placeholder="ID do Usuário" required>
+                
+                <button type="button" id="btn-fetch" class="botao-amarelo-acao">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </div>
+
+            <div class="grupo-entrada system-field">
+                <i class="fa-solid fa-network-wired"></i>
+                <input type="text" id="ip_maquina" name="ip_maquina" placeholder="IP Identificado" readonly>
+            </div>
+
+            <div class="grupo-entrada textarea-group">
+                <i class="fa-solid fa-align-left"></i>
+                <textarea id="motivo" name="motivo_desbloqueio" placeholder="Justificativa do acesso..." required></textarea>
+            </div>
+
+            <button type="submit" class="botao-finalizar-desbloqueio">FINALIZAR DESBLOQUEIO</button>
+        </form>
+
+        <div class="footer-status">
+            <p>NEXUS CORE SECURITY SYSTEM</p>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('btn-fetch').addEventListener('click', function() {
+        const userId = document.getElementById('id_usuario').value;
+        const btn = this;
+
+        if (!userId) {
+            alert("Por favor, insira o ID para sincronizar.");
+            return;
+        }
+
+        // Feedback visual de carregamento
+        btn.style.opacity = "0.5";
+        const icon = btn.querySelector('i');
+        icon.classList.add('fa-spin'); // Faz o ícone girar
+
+        fetch('/api/buscar-ip-bloqueado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_usuario: userId }) 
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.style.opacity = "1";
+            icon.classList.remove('fa-spin');
+            
+            if (data.ip_origem) {
+                document.getElementById('ip_maquina').value = data.ip_origem;
+                document.getElementById('num_bloqueio_input').value = data.num_bloqueio;
+            } else {
+                alert("Nenhum bloqueio pendente para este ID.");
+                document.getElementById('ip_maquina').value = "";
+                document.getElementById('num_bloqueio_input').value = "";
+            }
+        })
+        .catch(err => {
+            btn.style.opacity = "1";
+            icon.classList.remove('fa-spin');
+            console.error("Erro na requisição:", err);
+            alert("Erro ao conectar com o servidor.");
+        });
+    });
+    </script>
+
+</body>
+</html>

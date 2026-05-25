@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro</title> 
+    <link rel="stylesheet" href="{{ url_for('static', filename='cadastro.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="cartao-glass">
+        <div class="secao-cabecalho">
+            <div class="icone-perfil">
+                <i class="fa-solid fa-user-plus"></i> 
+            </div>
+            <h2>Criar Conta</h2>
+        </div>
+
+        <form id="formCadastro" action="/cadastro" method="POST">
+            
+            <div class="grupo-entrada apenas-leitura">
+                <i class="fa-solid fa-fingerprint"></i>
+                <input type="text" id="idAutomatico" name="num_usuario" readonly title="ID Gerado pelo Sistema">
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" name="nome" placeholder="Nome Completo" required>
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-address-card"></i>
+                <input type="text" name="cpf" placeholder="CPF" required> 
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" name="email" placeholder="E-mail" required>
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-phone"></i>
+                <input type="tel" name="telefone" placeholder="Telefone" required> 
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" name="senha" placeholder="Senha" required>
+            </div>
+
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-shield-halved"></i>
+                <input type="password" name="repetir_senha" placeholder="Repetir Senha" required>
+            </div>
+
+            <button type="submit" class="botao-cadastro">FINALIZAR CADASTRO</button>
+        </form>
+
+        <div class="texto-rodape">
+            Já tem uma conta? <a href="{{ url_for('login') }}">Faça Login</a>
+        </div>
+    </div>
+
+    <script>
+        // Gera um número aleatório de 6 dígitos para o ID do usuário
+        window.onload = function() {
+            const randomNum = Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('idAutomatico').value = randomNum;
+        };
+    </script>
+
+</body>
+</html>

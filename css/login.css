@@ -1,0 +1,130 @@
+/* ============================================================
+   ESTRUTURA BASE E RESET
+   ============================================================ */
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
+    overflow: hidden; /* Evita barras de rolagem se o balão for para a borda */
+}
+
+/* ============================================================
+   CARD DE LOGIN (GLASS-CARD)
+   ============================================================ */
+/* Traduzido: .glass-card -> .cartao-glass */
+.cartao-glass {
+    width: 380px; padding: 40px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border-radius: 45px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    text-align: center;
+    color: #ffffff;
+}
+
+/* Traduzido: .profile-icon -> .icone-perfil */
+.icone-perfil { font-size: 45px; color: #ffffff; margin-bottom: 15px; }
+h2 { font-size: 24px; margin-bottom: 8px; color: #ffffff; }
+p { font-size: 13px; color: #ffffff; margin-bottom: 30px; opacity: 0.9; }
+
+/* Campos de Input */
+/* Traduzido: .input-group -> .grupo-entrada */
+.grupo-entrada {
+    display: flex; align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px; margin-bottom: 15px;
+    padding: 12px 15px; border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.grupo-entrada i { color: #ffffff; margin-right: 12px; }
+.grupo-entrada input {
+    background: none; border: none; outline: none;
+    color: #ffffff; width: 100%; font-size: 14px;
+}
+.grupo-entrada input::placeholder { color: rgba(255, 255, 255, 0.7); }
+
+/* Botão de Login */
+/* Traduzido: .login-btn -> .botao-login */
+.botao-login {
+    width: 100%; padding: 15px;
+    background: linear-gradient(to right, #4a54c9, #3e0b2e);
+    border: none; border-radius: 15px;
+    color: #ffffff; font-weight: bold; cursor: pointer;
+    text-transform: uppercase; margin-top: 10px;
+    transition: 0.3s;
+}
+.botao-login:hover { transform: scale(1.02); filter: brightness(1.2); }
+
+/* Rodapé e Links */
+/* Traduzido: .login-footer -> .rodape-login */
+.rodape-login { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+/* Traduzido: .forgot-link -> .link-esqueceu */
+.link-esqueceu { font-size: 12px; color: #ffffff; text-decoration: underline; }
+/* Traduzido: .dev-link -> .link-desenvolvedor */
+.link-desenvolvedor {
+    font-size: 11px; color: #ffffff; text-decoration: none; font-weight: bold;
+    background: rgba(255, 255, 255, 0.15); padding: 8px; border-radius: 8px;
+}
+/* Traduzido: .register-section -> .secao-cadastro */
+.secao-cadastro { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+.secao-cadastro p, .secao-cadastro a { color: #ffffff; font-size: 12px; }
+
+/* ============================================================
+   SISTEMA DE NOTIFICAÇÃO ALEATÓRIA (MODAL)
+   ============================================================ */
+
+/* Fundo escuro que trava a tela */
+/* Traduzido: .modal-overlay -> .fundo-modal */
+.fundo-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+}
+
+/* O Balão (Estilo Base) */
+/* Traduzido: .glass-balloon -> .balao-glass */
+.balao-glass {
+    position: fixed; /* Necessário para mover pelo site */
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 30px;
+    border-radius: 30px;
+    text-align: center;
+    max-width: 310px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    color: white;
+    z-index: 1001;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.balao-glass i { font-size: 40px; color: #ff3e3e; margin-bottom: 15px; display: block; }
+.balao-glass h3 { margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.5px; }
+.balao-glass p { font-size: 14px; opacity: 0.9; margin-bottom: 25px; line-height: 1.4; }
+
+/* Botão do Balão */
+/* Traduzido: .agree-btn -> .botao-concordo */
+.botao-concordo {
+    background: linear-gradient(to right, #4a54c9, #3e0b2e);
+    color: white; border: none; padding: 12px 30px;
+    border-radius: 12px; cursor: pointer; font-weight: bold;
+    text-transform: uppercase; transition: 0.3s;
+}
+.botao-concordo:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(74, 84, 201, 0.6); }
+
+/* CLASSES DE POSIÇÃO (Sorteadas pelo JavaScript) */
+/* Traduzido: de pos- para posicao- */
+.posicao-centro { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.posicao-superior-esquerda { top: 40px; left: 40px; }
+.posicao-superior-direita { top: 40px; right: 40px; }
+.posicao-inferior-esquerda { bottom: 40px; left: 40px; }
+.posicao-inferior-direita { bottom: 40px; right: 40px; }

@@ -1,0 +1,129 @@
+/* ============================================================
+   ESTRUTURA BASE (NEXUS CORE DESIGN)
+   ============================================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
+    background-attachment: fixed;
+    padding: 20px;
+}
+
+/* Traduzido: .glass-card -> .cartao-glass */
+.cartao-glass {
+    width: 100%;
+    max-width: 420px;
+    padding: 35px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    color: #fff;
+}
+
+/* Traduzido: .header-section -> .secao-cabecalho */
+.secao-cabecalho {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* Traduzido: .profile-icon -> .icone-perfil */
+.icone-perfil {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 35px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 10px;
+}
+
+h2 {
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+/* Traduzido: .input-group -> .grupo-entrada */
+.grupo-entrada {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    margin-bottom: 20px;
+    padding: 5px 0;
+}
+
+/* Estilo para o campo de ID (Somente leitura) */
+/* Traduzido: .input-group.readonly -> .grupo-entrada.apenas-leitura */
+.grupo-entrada.apenas-leitura {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    opacity: 0.8;
+}
+
+.grupo-entrada i {
+    width: 30px;
+    font-size: 18px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+.grupo-entrada input {
+    background: none;
+    border: none;
+    outline: none;
+    color: #fff;
+    width: 100%;
+    font-size: 15px;
+}
+
+.grupo-entrada input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Traduzido: .register-btn -> .botao-cadastro */
+.botao-cadastro {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(to right, #3e0b2e, #4a54c9);
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 10px;
+    transition: 0.3s;
+}
+
+.botao-cadastro:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Traduzido: .footer-text -> .texto-rodape */
+.texto-rodape {
+    margin-top: 25px;
+    text-align: center;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.texto-rodape a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+}

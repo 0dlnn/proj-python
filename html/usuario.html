@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Usuários</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='usuario.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="cartao-glass">
+        
+        <nav class="menu-navegacao">
+            <a href="{{ url_for('admin_desbloqueio') }}">
+                <i class="fa-solid fa-unlock-keyhole"></i> DESBLOQUEIO
+            </a>
+            <a href="#" class="active">
+                <i class="fa-solid fa-users-gear"></i> USUÁRIOS
+            </a>
+            <a href="{{ url_for('login') }}">
+                <i class="fa-solid fa-power-off"></i> SAIR
+            </a>
+        </nav>
+
+        <div class="secao-cabecalho">
+            <h2>Controle de usuários</h2>
+            <p>Controle de acesso e monitoramento de contas/status.</p>
+        </div>
+
+        <div class="barra-acoes">
+            <a href="{{ url_for('cadastro') }}" class="botao-amarelo-adicionar" style="text-decoration: none;">
+                <i class="fa-solid fa-user-plus"></i> CADASTRAR NOVO USUÁRIO
+            </a>
+        </div>
+
+        <div class="container-tabela">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>NOME</th>
+                        <th>E-MAIL</th>
+                        <th>TIPO PERFIL</th>
+                        <th>STATUS / RASTREIO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in lista %}
+                    <tr>
+                        <td class="texto-branco">#{{ u.num_usuario }}</td>
+                        <td class="texto-branco">{{ u.nome }}</td>
+                        <td class="texto-branco">{{ u.email }}</td>
+                        <td>
+                            <span class="selo-perfil {{ 'admin' if u.perfil == 1 else 'common' }}">
+                                {{ 'ADMIN' if u.perfil == 1 else 'COMUM' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="caixa-status">
+                                {% if u.id_status == 2 %}
+                                    <span class="ponto-status ponto-bloqueado"></span>
+                                    <span class="texto-status texto-bloqueado">
+                                        {{ u.ultimo_ip_bloqueio if u.ultimo_ip_bloqueio else 'IP DESCONHECIDO' }}
+                                    </span>
+                                {% else %}
+                                    <span class="ponto-status ponto-ativo"></span>
+                                    <span class="texto-status">
+                                        {{ u.ip_origem if u.ip_origem else 'ATIVO' }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="rodape-status">
+            <p>MODO ADMINISTRADOR</p>
+        </div>
+    </div>
+
+</body>
+</html>

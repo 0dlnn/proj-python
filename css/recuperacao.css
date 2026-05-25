@@ -1,0 +1,125 @@
+/* ============================================================
+   ESTRUTURA BASE (NEXUS CORE DESIGN)
+   ============================================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
+    background-attachment: fixed;
+}
+
+/* Traduzido: .glass-card -> .cartao-glass */
+.cartao-glass {
+    width: 380px;
+    padding: 45px 40px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    text-align: center;
+    color: #fff;
+}
+
+/* Traduzido: .header-section -> .secao-cabecalho */
+.secao-cabecalho {
+    margin-bottom: 30px;
+}
+
+/* Traduzido: .profile-icon -> .icone-perfil */
+.icone-perfil {
+    width: 90px;
+    height: 90px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 15px;
+}
+
+h2 {
+    font-weight: 400;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+/* Traduzido: .instruction -> .texto-instrucao */
+.texto-instrucao {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+/* Traduzido: .input-group -> .grupo-entrada */
+.grupo-entrada {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+    margin-bottom: 35px;
+    padding: 8px 0;
+}
+
+.grupo-entrada i {
+    width: 30px;
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.grupo-entrada input {
+    background: none;
+    border: none;
+    outline: none;
+    color: #fff;
+    width: 100%;
+    font-size: 16px;
+}
+
+.grupo-entrada input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Traduzido: .recovery-btn -> .botao-recuperacao */
+.botao-recuperacao {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 15px;
+    background: linear-gradient(to right, #3e0b2e, #4a54c9);
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.3s ease;
+}
+
+.botao-recuperacao:hover {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+/* Traduzido: .footer-text -> .texto-rodape */
+.texto-rodape {
+    margin-top: 30px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.texto-rodape a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+}
