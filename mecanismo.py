@@ -48,7 +48,12 @@ def login():
                 
                 else:
                     novas_tentativas = user['tentativas'] + 1
-                    ip_atual = request.remote_addr # CAPTURA DO IP
+                    
+                    # CAPTURA DO IP REAL (Trata o proxy reverso do Render ou fallback local)
+                    if request.headers.getlist("X-Forwarded-For"):
+                        ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
+                    else:
+                        ip_atual = request.remote_addr
                     
                     if novas_tentativas >= 5:
                         # BLOQUEIO COM IP
@@ -81,8 +86,11 @@ def cadastro():
         senha = request.form.get('senha')
         repetir_senha = request.form.get('repetir_senha')
 
-        # CAPTURA O IP DE ORIGEM DO USUÁRIO
-        ip_cadastro = request.remote_addr
+        # CAPTURA O IP DE ORIGEM DO USUÁRIO (Trata o proxy reverso do Render ou fallback local)
+        if request.headers.getlist("X-Forwarded-For"):
+            ip_cadastro = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
+        else:
+            ip_cadastro = request.remote_addr
 
         # Validação simples de segurança
         if senha != repetir_senha:
