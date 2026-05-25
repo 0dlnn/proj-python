@@ -35,7 +35,7 @@ def login():
             
             if user:
                 if user.get('id_status') == 2:
-                    # Adicionado trava_demo para quando já está bloqueado
+                    # Adicionado trava_demo para quando já está bloqueadoo
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
                 if user['senha_hash'] == senha:
