@@ -28,7 +28,7 @@
             <p>Analise de ID com IP para controle e desbloqueio.</p>
         </div>
 
-        <form action="{{ url_for('finalizar_desbloqueio') }}" method="POST" class="formulario-desbloqueio">
+        <form action="{{ url_for('finalizar_desbloqueio') }}" method="POST" class="formulario-desbloqueio" onsubmit="return validarEnvio()">
             
             <div class="linha-entrada">
                 <div class="grupo-entrada campo-id">
@@ -43,7 +43,7 @@
 
             <div class="grupo-entrada apenas-leitura">
                 <i class="fa-solid fa-network-wired"></i>
-                <input type="text" id="ip_identificado" placeholder="IP Identificado" readonly>
+                <input type="text" name="ip_identificado" id="ip_identificado" placeholder="IP Identificado" readonly>
             </div>
 
             <div class="grupo-entrada">
@@ -60,6 +60,18 @@
     </div>
 
     <script>
+    // Nova função de validação obrigatória antes de submeter o formulário
+    function validarEnvio() {
+        const ipValue = document.getElementById('ip_identificado').value.trim();
+        
+        // Se o campo estiver vazio ou contendo apenas o placeholder temporário, bloqueia o envio
+        if (!ipValue || ipValue === "IP DESCONHECIDO") {
+            alert("Operação Negada! Você precisa sincronizar o IP do usuário antes de realizar o desbloqueio.");
+            return false; // Cancela o envio do formulário
+        }
+        return true; // Permite o envio
+    }
+
     function sincronizarIP() {
         const id = document.getElementById('id_usuario').value;
         const ipField = document.getElementById('ip_identificado');

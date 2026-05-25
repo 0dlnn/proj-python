@@ -46,7 +46,6 @@ p { color: rgba(255, 255, 255, 0.8); font-size: 12px; margin-bottom: 25px; }
 /* ============================================================
    AÇÕES (BOTÃO ADICIONAR)
    ============================================================ */
-/* Traduzido: .action-bar -> .barra-acoes */
 .barra-acoes { display: flex; justify-content: flex-end; margin-bottom: 15px; }
 
 /* Traduzido: .yellow-btn-add -> .botao-amarelo-adicionar */
@@ -68,7 +67,28 @@ p { color: rgba(255, 255, 255, 0.8); font-size: 12px; margin-bottom: 25px; }
 /* Traduzido: .admin-table-container -> .container-tabela */
 .container-tabela { 
     background: rgba(0,0,0,0.25); border-radius: 20px; 
-    overflow: hidden; border: 1px solid rgba(255,255,255,0.05); 
+    border: 1px solid rgba(255,255,255,0.05); 
+    
+    /* ADICIONADO APENAS O NECESSÁRIO PARA A ROLAGEM ISOLADA */
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* CUSTOMIZAÇÃO DA BARRA DE ROLAGEM (Tema escuro/fino para não quebrar o layout) */
+.container-tabela::-webkit-scrollbar {
+    width: 6px;
+}
+.container-tabela::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+.container-tabela::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+.container-tabela::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 table { width: 100%; border-collapse: collapse; }
@@ -119,7 +139,7 @@ thead th {
 
 /* Traduzido: .status-text -> .texto-status */
 .texto-status {
-    font-family: 'Consolas', 'Monaco', monospace; /* Fonte estilo terminal para o IP */
+    font-family: 'Consolas', 'Monaco', monospace;
     font-size: 11px; font-weight: bold;
     color: #ffffff; letter-spacing: 0.5px;
 }
