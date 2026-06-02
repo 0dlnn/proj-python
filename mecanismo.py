@@ -13,7 +13,7 @@ def get_db_connection():
         password='Hack@2026', 
         database='2026ProjetoHack',
         connection_timeout=5
-    )
+    ) # teste
 
 @app.route('/')
 def home():
