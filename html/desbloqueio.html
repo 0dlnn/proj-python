@@ -36,14 +36,14 @@
                     <input type="text" name="id_usuario" id="id_usuario" placeholder="ID do Usuário" required>
                 </div>
                 
-                <button type="button" class="botao-amarelo-sincronizar" onclick="sincronizarIP()" title="Sincronizar IP do usuario.">
+                <button type="button" class="botao-amarelo-sincronizar" onclick="buscarIP()" title="Sincronizar IP do usuario.">
                     <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
             </div>
 
             <div class="grupo-entrada apenas-leitura">
                 <i class="fa-solid fa-network-wired"></i>
-                <input type="text" name="ip_identificado" id="ip_identificado" placeholder="IP Identificado" readonly>
+                <input type="text" name="ip_identificado" id="ip_identificado" placeholder="IP DESCONHECIDO" readonly>
             </div>
 
             <div class="grupo-entrada">
@@ -70,8 +70,51 @@
     </div>
 
     <script>
-    // Nova função de validação obrigatória antes de submeter o formulário
+    // FUNÇÃO QUE BUSCA O IP NA ROTA PYTHON EM SEGUNDO PLANO
+    function buscarIP() {
+        const idUsuario = document.getElementById('id_usuario').value.trim();
+        const campoIP = document.getElementById('ip_identificado');
+
+        if (!idUsuario) {
+            alert("Por favor, digite o ID do Usuário antes de sincronizar!");
+            return;
+        }
+
+        campoIP.value = "Buscando...";
+
+        fetch('/buscar_ip_bloqueio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: idUsuario })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.ip) {
+                campoIP.value = data.ip;
+            } else {
+                campoIP.value = "IP DESCONHECIDO";
+            }
+        })
+        .catch(error => {
+            console.error("Erro na requisição:", error);
+            campoIP.value = "ERRO AO CONECTAR";
+        });
+    }
+
+    // FUNÇÃO DE VALIDAÇÃO ANTES DE ENVIAR O FORMULÁRIO (TRAVA DE SEGURANÇA)
     function validarEnvio() {
         const ipValue = document.getElementById('ip_identificado').value.trim();
         
-        // Se o campo estiver vazio ou contendo apenas o placeholder temporário, bloqueia o envio
+        // Se o Admin tentar enviar sem sincronizar ou se o IP for inválido/desconhecido, barra o envio
+        if (ipValue === "" || ipValue === "IP DESCONHECIDO" || ipValue === "Buscando..." || ipValue === "ERRO AO CONECTAR") {
+            alert("Atenção: Não é possível liberar um acesso sem um IP de rastreio válido. Sincronize o ID primeiro!");
+            return false; // Cancela o envio do formulário
+        }
+        return true; // Permite o envio
+    }
+    </script>
+
+</body>
+</html>
