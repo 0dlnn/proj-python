@@ -94,7 +94,7 @@
             if (data.ip) {
                 campoIP.value = data.ip;
             } else {
-                campoIP.value = "AGUARDANDO SINCRONIZAÇÃO";
+                campoIP.value = "IP DESCONHECIDO";
             }
         })
         .catch(error => {
@@ -108,7 +108,7 @@
         const ipValue = document.getElementById('ip_identificado').value.trim();
         
         // Se o Admin tentar enviar sem sincronizar ou se o IP for inválido/desconhecido, barra o envio
-        if (ipValue === "" || ipValue === "AGUARDANDO SINCRONIZAÇÃO" || ipValue === "Buscando..." || ipValue === "ERRO AO CONECTAR") {
+        if (ipValue === "" || ipValue === "IP DESCONHECIDO" || ipValue === "Buscando..." || ipValue === "ERRO AO CONECTAR") {
             alert("Atenção: Não é possível liberar um acesso sem um IP de rastreio válido. Sincronize o ID primeiro!");
             return false; // Cancela o envio do formulário
         }
