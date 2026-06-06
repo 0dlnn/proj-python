@@ -25,7 +25,7 @@
 
         <div class="secao-cabecalho">
             <h2>Controle de usuários</h2>
-            <p>Controle de acesso e monitoramento de contas/status.</p>
+            <p>Controle de acesso and monitoramento de contas/status.</p>
         </div>
 
         <div class="barra-acoes">
@@ -43,6 +43,7 @@
                         <th>E-MAIL</th>
                         <th>TIPO PERFIL</th>
                         <th>STATUS / RASTREIO</th>
+                        <th>ÚLTIMO RESPONSÁVEL</th> <!-- COLUNA ADICIONADA -->
                     </tr>
                 </thead>
                 <tbody>
@@ -70,6 +71,10 @@
                                     </span>
                                 {% endif %}
                             </div>
+                        </td>
+                        <!-- CÉLULA ADICIONADA: EXIBE A SIGLA (LS, AR, EM) OU UM TRAÇO SE ESTIVER EM BRANCO -->
+                        <td class="texto-branco" style="text-align: center; font-weight: bold; letter-spacing: 1px;">
+                            {{ u.responsavel_desbloqueio if u.responsavel_desbloqueio else '-' }}
                         </td>
                     </tr>
                     {% endfor %}

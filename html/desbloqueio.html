@@ -51,6 +51,16 @@
                 <textarea name="motivo" placeholder="Justificativa do acesso/desbloqueio..." rows="4" required></textarea>
             </div>
 
+            <div class="grupo-entrada">
+                <i class="fa-solid fa-user-shield"></i>
+                <input type="text" 
+                       name="responsavel" 
+                       id="responsavel" 
+                       placeholder="Sigla do Responsável (Ex: ADM, SUP)" 
+                       maxlength="10" 
+                       required>
+            </div>
+
             <button type="submit" class="botao-azul-finalizar">REALIZAR DESBLOQUEIO</button>
         </form>
 
@@ -65,40 +75,3 @@
         const ipValue = document.getElementById('ip_identificado').value.trim();
         
         // Se o campo estiver vazio ou contendo apenas o placeholder temporário, bloqueia o envio
-        if (!ipValue || ipValue === "IP DESCONHECIDO") {
-            alert("Operação Negada! Você precisa sincronizar o IP do usuário antes de realizar o desbloqueio.");
-            return false; // Cancela o envio do formulário
-        }
-        return true; // Permite o envio
-    }
-
-    function sincronizarIP() {
-        const id = document.getElementById('id_usuario').value;
-        const ipField = document.getElementById('ip_identificado');
-
-        if (!id) {
-            alert("Por favor, digite o ID do usuário primeiro.");
-            return;
-        }
-
-        // Faz a chamada para a rota Python que você criou
-        fetch('/buscar_ip_bloqueio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id })
-        })
-        .then(response => response.json())
-        .then(data => {
-            ipField.value = data.ip;
-            // Atualizado: alterado de 'flash-highlight' para 'destaque-alerta' para casar com o CSS novo
-            ipField.classList.add('destaque-alerta'); 
-            setTimeout(() => ipField.classList.remove('destaque-alerta'), 1000);
-        })
-        .catch(err => {
-            console.error('Erro:', err);
-            alert("Erro ao buscar IP no banco de dados.");
-        });
-    }
-    </script>
-</body>
-</html>

@@ -136,8 +136,8 @@ def admin_usuarios():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # Puxa todas as colunas para garantir o funcionamento das bolinhas de status e IPs
-    cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, ultimo_ip_bloqueio, ip_origem FROM usuario")
+    # ADICIONADO: 'responsavel_desbloqueio' inserido na busca SQL
+    cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, responsavel_desbloqueio FROM usuario")
     
     usuarios_banco = cursor.fetchall()
     conn.close()
@@ -170,26 +170,31 @@ def buscar_ip_bloqueio():
 
 @app.route('/finalizar_desbloqueio', methods=['POST'])
 def finalizar_desbloqueio():
-    # Rota que executa o desbloqueio real e limpa os rastros no banco
-    id_usuario = request.form.get('id_usuario')
-    # O motivo pode ser capturado aqui para logs futuros se necessário
-    motivo = request.form.get('motivo') 
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    # Rota que executa o desbloqueio real e salva o rastro de quem liberou o acesso
+    id_usuario = request.form.get('id_usuario') [cite: 1, 167]
+    motivo = request.form.get('motivo')         [cite: 1, 168]
     
-    # RESET: Status volta a 1 (Ativo), zera tentativas e remove IP do bloqueio anterior
+    # CHAVE ESTRANGEIRA / NOVA CAPTURA: Recebe a sigla digitada no formulário HTML
+    sigla_responsavel = request.form.get('responsavel')
+
+    conn = get_db_connection() [cite: 1, 172]
+    cursor = conn.cursor()     [cite: 1, 173]
+    
+    # RESET LÓGICO: Atualiza o status para ativo (1), reseta tentativas, limpa o IP e grava o responsável
     cursor.execute("""
         UPDATE usuario 
-        SET id_status = 1, tentativas = 0, ultimo_ip_bloqueio = NULL 
+        SET id_status = 1, 
+            tentativas = 0, 
+            ultimo_ip_bloqueio = NULL,
+            responsavel_desbloqueio = %s 
         WHERE num_usuario = %s
-    """, (id_usuario,))
+    """, (sigla_responsavel, id_usuario)) [cite: 1, 178, 179, 180, 181, 182]
     
-    conn.commit()
-    conn.close()
+    conn.commit() [cite: 1, 183]
+    conn.close()  [cite: 1, 187]
     
     # Redireciona para a lista de utilizadores para validar a alteração visual
-    return redirect(url_for('admin_usuarios'))
+    return redirect(url_for('admin_usuarios')) [cite: 1, 188]
 
 # =========================================================================
 # ROTA DE RECUPERAÇÃO DE SENHA (NEXUS CORE)
