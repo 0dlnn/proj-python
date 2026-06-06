@@ -137,7 +137,7 @@ def admin_usuarios():
     cursor = conn.cursor(dictionary=True)
     
     # Puxa todas as colunas para garantir o funcionamento das bolinhas de status e IPs
-    cursor.execute("SELECT num_usuario, nome, email, perfil, id_status FROM usuario")
+    cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, ultimo_ip_bloqueio, ip_origem FROM usuario")
     
     usuarios_banco = cursor.fetchall()
     conn.close()
