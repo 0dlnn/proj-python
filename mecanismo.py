@@ -137,7 +137,7 @@ def admin_usuarios():
     cursor = conn.cursor(dictionary=True)
     
     # ADICIONADO: 'responsavel_desbloqueio' inserido na busca SQL
-    cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, responsavel_desbloqueio FROM usuario")
+    cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, ip_origem, ultimo_ip_bloqueio, responsavel_desbloqueio FROM usuario")
     
     usuarios_banco = cursor.fetchall()
     conn.close()
