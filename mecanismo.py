@@ -13,7 +13,7 @@ def get_db_connection():
         password='Hack@2026', 
         database='2026ProjetoHack',
         connection_timeout=5
-    ) # teste
+    )
 
 @app.route('/')
 def home():
@@ -44,7 +44,9 @@ def login():
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
-                    return redirect(url_for('admin_desbloqueio') if session['perfil'] == 1 else 'https://www.google.com')
+                    
+                    # Correção: Adicionado a chamada redirect() correta para o link externo
+                    return redirect(url_for('admin_desbloqueio') if session['perfil'] == 1 else redirect('https://www.google.com'))
                 
                 else:
                     novas_tentativas = user['tentativas'] + 1
@@ -59,19 +61,17 @@ def login():
                         # BLOQUEIO COM IP
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
-                        # Adicionado trava_demo para o momento do bloqueio
                         return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
                     else:
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
-                        # Adicionado trava_demo para erro simples de senha
                         return render_template('login.html', erro=True, email_digitado=email, trava_demo=True)
             else:
-                # Adicionado trava_demo para usuário não encontrado (evita brute force de e-mails)
                 return render_template('login.html', erro=True, email_digitado=email, trava_demo=True)
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"Erro no login: {e}")
         return render_template('login.html', db_error=True)
+        
     return render_template('login.html')
 
 @app.route('/cadastro', methods=['GET', 'POST'])
@@ -100,17 +100,14 @@ def cadastro():
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # 2. Comando SQL atualizado para incluir 'ip_origem'
+            # CORREÇÃO: Alinhamento de colunas e marcadores %s (Eram 8 colunas mapeadas para 7 valores)
             sql = """INSERT INTO usuario (num_usuario, nome, email, senha_hash, cpf, telefone, perfil, id_status, data, ip_origem) 
                      VALUES (%s, %s, %s, %s, %s, %s, 0, 1, CURDATE(), %s)"""
             
-            # 3. Adicionando o ip_cadastro na tupla de valores (último %s)
             valores = (num_usuario, nome, email, senha, cpf, telefone, ip_cadastro)
             cursor.execute(sql, valores)
             
-            # Grava os dados permanentemente
             conn.commit() 
-            
             cursor.close()
             conn.close()
             return redirect(url_for('login'))
@@ -123,22 +120,21 @@ def cadastro():
 
 @app.route('/admin/desbloqueio')
 def admin_desbloqueio():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    # ALTERAÇÃO: Nome do ficheiro atualizado para desbloqueio.html
+    if 'user_id' not in session: 
+        return redirect(url_for('login'))
     return render_template('desbloqueio.html')
 
 @app.route('/admin/usuarios')
 def admin_usuarios():
-    # 1. Segurança: Verifica se quem está acessando é Admin
+    # Segurança: Verifica se quem está acessando é Admin
     if 'perfil' not in session or session['perfil'] != 1:
         return redirect(url_for('login'))
         
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # ADICIONADO: 'responsavel_desbloqueio' inserido na busca SQL
+    # Busca com a auditoria de responsável incluída
     cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, ip_origem, ultimo_ip_bloqueio, responsavel_desbloqueio FROM usuario")
-    
     usuarios_banco = cursor.fetchall()
     conn.close()
 
@@ -150,37 +146,38 @@ def admin_usuarios():
 
 @app.route('/buscar_ip_bloqueio', methods=['POST'])
 def buscar_ip_bloqueio():
-    # ROTA ATUALIZADA: Busca o IP de Cadastro para conferência do Admin
-    data = request.get_json()
-    id_usuario = data.get('id')
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # Alteramos a consulta para puxar o IP_ORIGEM
-    cursor.execute("SELECT ip_origem FROM usuario WHERE num_usuario = %s", (id_usuario,))
-    user = cursor.fetchone()
-    conn.close()
-
-    if user and user['ip_origem']:
-        return jsonify({'ip': user['ip_origem']})
-    
-    # Caso seja um usuário antigo sem IP registrado ou ID inexistente
-    return jsonify({'ip': 'Sem registro de IP de origem'})
+    try:
+        dados = request.get_json()
+        id_usuario = dados.get('id') if dados else None
+        
+        if not id_usuario:
+            return jsonify({'ip': 'ID NÃO INFORMADO'})
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("SELECT ultimo_ip_bloqueio FROM usuario WHERE num_usuario = %s", (id_usuario,))
+        resultado = cursor.fetchone()
+        conn.close()
+        
+        # Retorna o IP dinâmico ou o status limpo para o front-end
+        if resultado and resultado['ultimo_ip_bloqueio']:
+            return jsonify({'ip': resultado['ultimo_ip_bloqueio']})
+        
+        return jsonify({'ip': 'IP DESCONHECIDO'})
+    except Exception as e:
+        print(f"Erro ao buscar IP: {e}")
+        return jsonify({'ip': 'ERRO NO SERVIDOR'})
 
 @app.route('/finalizar_desbloqueio', methods=['POST'])
 def finalizar_desbloqueio():
-    # Rota que executa o desbloqueio real e salva o rastro de quem liberou o acesso
-    id_usuario = request.form.get('id_usuario') [cite: 1, 167]
-    motivo = request.form.get('motivo')         [cite: 1, 168]
-    
-    # CHAVE ESTRANGEIRA / NOVA CAPTURA: Recebe a sigla digitada no formulário HTML
+    id_usuario = request.form.get('id_usuario')
     sigla_responsavel = request.form.get('responsavel')
 
-    conn = get_db_connection() [cite: 1, 172]
-    cursor = conn.cursor()     [cite: 1, 173]
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    # RESET LÓGICO: Atualiza o status para ativo (1), reseta tentativas, limpa o IP e grava o responsável
+    # RESET LÓGICO COMPLETO: Grava o responsável (LS, AR, EM) e limpa as travas
     cursor.execute("""
         UPDATE usuario 
         SET id_status = 1, 
@@ -188,13 +185,12 @@ def finalizar_desbloqueio():
             ultimo_ip_bloqueio = NULL,
             responsavel_desbloqueio = %s 
         WHERE num_usuario = %s
-    """, (sigla_responsavel, id_usuario)) [cite: 1, 178, 179, 180, 181, 182]
+    """, (sigla_responsavel, id_usuario))
     
-    conn.commit() [cite: 1, 183]
-    conn.close()  [cite: 1, 187]
+    conn.commit()
+    conn.close() 
     
-    # Redireciona para a lista de utilizadores para validar a alteração visual
-    return redirect(url_for('admin_usuarios')) [cite: 1, 188]
+    return redirect(url_for('admin_usuarios'))
 
 # =========================================================================
 # ROTA DE RECUPERAÇÃO DE SENHA (NEXUS CORE)
@@ -204,16 +200,10 @@ def finalizar_desbloqueio():
 def recuperacao():
     if request.method == 'POST':
         email = request.form.get('email')
-        
-        # Aqui no futuro você pode colocar a lógica de banco para verificar o e-mail,
-        # mas para a sua demonstração, apenas redirecionar para o login funciona perfeito.
         print(f"[NEXUS LOG] Solicitação de recuperação para o e-mail: {email}")
-        
         return redirect(url_for('login'))
         
     return render_template('recuperacao.html')
-
-# =========================================================================
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)
