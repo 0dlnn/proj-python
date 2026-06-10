@@ -1,9 +1,17 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import mysql.connector
 from datetime import datetime
+import bcrypt  # <--- Biblioteca responsável por gerar hashes seguros de senha
 
 app = Flask(__name__, template_folder='html', static_folder='css')
 app.secret_key = 'chave_secreta_para_seguranca'
+
+# === REGRA DE CYBERSECURITY: GERENCIAMENTO DE SESSÃO ATIVA ===
+@app.before_request
+def configurar_sessao():
+    # Define que os dados de sessão (cookies) expiram imediatamente quando o navegador ou aba fecham,
+    # impedindo que o usuário pule o login ao abrir o site novamente (Princípio de Privilégio Mínimo)
+    session.permanent = False
 
 def get_db_connection():
     return mysql.connector.connect(
@@ -17,8 +25,8 @@ def get_db_connection():
 
 @app.route('/')
 def home():
-    if 'user_id' in session:
-        return redirect(url_for('admin_desbloqueio'))
+    # REGRA DE PROTEÇÃO: Força a limpeza de qualquer token residual na memória antes de avaliar a rota inicial
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -38,15 +46,25 @@ def login():
                     # Adicionado trava_demo para quando já está bloqueado
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
-                if user['senha_hash'] == senha:
+                # === COMPARAÇÃO DA SENHA CRIPTOGRAFADA VIA BACKEND ===
+                # Converte as strings recebidas em bytes textuais e valida usando a regra interna do Bcrypt.
+                # Se o registro no banco for antigo (texto limpo), o checkpw retornará falso de forma segura.
+                senha_digitada_bytes = senha.encode('utf-8')
+                senha_banco_bytes = user['senha_hash'].encode('utf-8')
+
+                if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
                     
-                    # Correção: Adicionado a chamada redirect() correta para o link externo
-                    return redirect(url_for('admin_desbloqueio') if session['perfil'] == 1 else redirect('https://www.google.com'))
+                    # REGRA DE GOVERNANÇA: O roteamento é determinado estritamente pelas credenciais validadas no banco de dados.
+                    # Perfil == 1 (Admin) acessa o dashboard; Perfil Comum é redirecionado para fora do escopo administrativo.
+                    if session['perfil'] == 1:
+                        return redirect(url_for('admin_desbloqueio'))
+                    else:
+                        return redirect('https://www.google.com')
                 
                 else:
                     novas_tentativas = user['tentativas'] + 1
@@ -96,6 +114,13 @@ def cadastro():
         if senha != repetir_senha:
             return "<h1>Senhas não coincidem!</h1><a href='/cadastro'>Voltar</a>"
 
+        # === GERAÇÃO DE HASH DA SENHA COM SALT SECURITY ===
+        # Passa a senha limpa recebida do formulário para bytes, gera um salt pseudo-aleatório
+        # único e codifica a string resultante para armazenamento seguro e ininteligível.
+        senha_bytes = senha.encode('utf-8')
+        salt = bcrypt.gensalt()
+        senha_criptografada = bcrypt.hashpw(senha_bytes, salt).decode('utf-8')
+
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -104,7 +129,8 @@ def cadastro():
             sql = """INSERT INTO usuario (num_usuario, nome, email, senha_hash, cpf, telefone, perfil, id_status, data, ip_origem) 
                      VALUES (%s, %s, %s, %s, %s, %s, 0, 1, CURDATE(), %s)"""
             
-            valores = (num_usuario, nome, email, senha, cpf, telefone, ip_cadastro)
+            # Envia a senha mascarada, mantendo o CPF e Telefone normais em texto limpo
+            valores = (num_usuario, nome, email, senha_criptografada, cpf, telefone, ip_cadastro)
             cursor.execute(sql, valores)
             
             conn.commit() 
@@ -120,14 +146,18 @@ def cadastro():
 
 @app.route('/admin/desbloqueio')
 def admin_desbloqueio():
-    if 'user_id' not in session: 
+    # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
+    # Verifica se a sessão do ID existe e valida se o privilégio corresponde a Administrador (1).
+    # Caso tente forçar o acesso inserindo a URL direto na barra, o sistema rejeita e joga pro login.
+    if 'user_id' not in session or session.get('perfil') != 1: 
         return redirect(url_for('login'))
     return render_template('desbloqueio.html')
 
 @app.route('/admin/usuarios')
 def admin_usuarios():
-    # Segurança: Verifica se quem está acessando é Admin
-    if 'perfil' not in session or session['perfil'] != 1:
+    # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
+    # Impede operadores não autenticados ou usuários padrão de acessar o inventário de monitoramento.
+    if 'user_id' not in session or session.get('perfil') != 1:
         return redirect(url_for('login'))
         
     conn = get_db_connection()
@@ -146,6 +176,12 @@ def admin_usuarios():
 
 @app.route('/buscar_ip_bloqueio', methods=['POST'])
 def buscar_ip_bloqueio():
+    # === ISOLAMENTO DE API (BACKEND LOCKDOWN) ===
+    # Garante que requisições automatizadas em segundo plano vindas de scripts ou de fora do painel
+    # sejam sumariamente interceptadas se não pertencerem a um administrador em sessão.
+    if 'user_id' not in session or session.get('perfil') != 1:
+        return jsonify({'ip': 'ACESSO NEGADO'}), 403
+
     try:
         dados = request.get_json()
         id_usuario = dados.get('id') if dados else None
@@ -171,6 +207,11 @@ def buscar_ip_bloqueio():
 
 @app.route('/finalizar_desbloqueio', methods=['POST'])
 def finalizar_desbloqueio():
+    # === VALIDAÇÃO DE AUTORIDADE EM BANCO ===
+    # Protege a execução de comandos DML (UPDATE) para evitar injeções ou modificações arbitrárias.
+    if 'user_id' not in session or session.get('perfil') != 1:
+        return redirect(url_for('login'))
+
     id_usuario = request.form.get('id_usuario')
     sigla_responsavel = request.form.get('responsavel')
 
@@ -191,6 +232,13 @@ def finalizar_desbloqueio():
     conn.close() 
     
     return redirect(url_for('admin_usuarios'))
+
+# === ROTA ADICIONAL: ENCERRAMENTO SEGURO DE PRIVILÉGIOS (TERMINAÇÃO DE CONEXÃO) ===
+@app.route('/logout')
+def logout():
+    # Destrói a sessão de forma segura limpando as chaves de acesso da memória RAM
+    session.clear()
+    return redirect(url_for('login'))
 
 # =========================================================================
 # ROTA DE RECUPERAÇÃO DE SENHA (NEXUS CORE)
