@@ -6,11 +6,13 @@ import bcrypt  # <--- Biblioteca responsável por gerar hashes seguros de senha
 app = Flask(__name__, template_folder='html', static_folder='css')
 app.secret_key = 'chave_secreta_para_seguranca'
 
+# =========================================================================
 # === REGRA DE CYBERSECURITY: GERENCIAMENTO DE SESSÃO ATIVA ===
+# =========================================================================
 @app.before_request
 def configurar_sessao():
     # Define que os dados de sessão (cookies) expiram imediatamente quando o navegador ou aba fecham,
-    # impedindo que o usuário pule o login ao abrir o site novamente (Princípio de Privilégio Mínimo)
+    # impedindo que o usuário pule o login ao abrir o site novamente (Princípio de Privilégio Mínimo).
     session.permanent = False
 
 def get_db_connection():
@@ -29,6 +31,9 @@ def home():
     session.clear()
     return redirect(url_for('login'))
 
+# =========================================================================
+# === SUBSISTEMA DE AUTENTICAÇÃO E ANÁLISE DE BRUTE-FORCE ===
+# =========================================================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
@@ -38,23 +43,27 @@ def login():
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             
+            # Busca o usuário pelo e-mail para avaliar o estado da conta
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
             if user:
                 if user.get('id_status') == 2:
-                    # Adicionado trava_demo para quando já está bloqueado
+                    # Adicionado trava_demo para quando o usuário já se encontra na lista de bloqueados
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
-                # === COMPARAÇÃO DA SENHA CRIPTOGRAFADA VIA BACKEND ===
-                # Converte as strings recebidas em bytes textuais e valida usando a regra interna do Bcrypt.
-                # Se o registro no banco for antigo (texto limpo), o checkpw retornará falso de forma segura.
+                # === COMPARAÇÃO DA SENHA CRIPTOGRAFADA VIA BACKEND (CORRIGIDO) ===
+                # Transforma a string recebida do HTML e o hash do banco em bytes para a validação do algoritmo.
                 senha_digitada_bytes = senha.encode('utf-8')
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
+                # O Bcrypt extrai o Salt do próprio hash do banco e faz a validação matemática segura.
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
+                    # Sucesso: Reseta o contador de tentativas falhas caso o usuário acerte a credencial
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
+                    
+                    # Cria as variáveis de sessão na memória RAM do servidor
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
@@ -67,6 +76,7 @@ def login():
                         return redirect('https://www.google.com')
                 
                 else:
+                    # Senha incorreta: Incrementa o contador de tentativas falhas
                     novas_tentativas = user['tentativas'] + 1
                     
                     # CAPTURA DO IP REAL (Trata o proxy reverso do Render ou fallback local)
@@ -75,12 +85,14 @@ def login():
                     else:
                         ip_atual = request.remote_addr
                     
+                    # Se atingir o limite de 5 erros, a conta sofre um bloqueio lógico preventivo
                     if novas_tentativas >= 5:
-                        # BLOQUEIO COM IP
+                        # GATILHO DE SEGURANÇA: Muda o status para 2 (bloqueado) e carimba o IP do atacante
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
                         return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
                     else:
+                        # Apenas atualiza o número de erros atuais na tabela usuario
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
                         return render_template('login.html', erro=True, email_digitado=email, trava_demo=True)
@@ -92,10 +104,13 @@ def login():
         
     return render_template('login.html')
 
+# =========================================================================
+# === SUBSISTEMA DE CADASTRO E GERAÇÃO DE ASSINATURA DE SEGURANÇA ===
+# =========================================================================
 @app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
     if request.method == 'POST':
-        # 1. Captura os dados do formulário HTML
+        # 1. Captura os dados brutos enviados pelo formulário HTML
         num_usuario = request.form.get('num_usuario')
         nome = request.form.get('nome')
         email = request.form.get('email')
@@ -110,7 +125,7 @@ def cadastro():
         else:
             ip_cadastro = request.remote_addr
 
-        # Validação simples de segurança
+        # Validação simples de segurança antes do processamento
         if senha != repetir_senha:
             return "<h1>Senhas não coincidem!</h1><a href='/cadastro'>Voltar</a>"
 
@@ -129,7 +144,7 @@ def cadastro():
             sql = """INSERT INTO usuario (num_usuario, nome, email, senha_hash, cpf, telefone, perfil, id_status, data, ip_origem) 
                      VALUES (%s, %s, %s, %s, %s, %s, 0, 1, CURDATE(), %s)"""
             
-            # Envia a senha mascarada, mantendo o CPF e Telefone normais em texto limpo
+            # Envia a senha mascarada (hash), mantendo o CPF e Telefone normais em texto limpo
             valores = (num_usuario, nome, email, senha_criptografada, cpf, telefone, ip_cadastro)
             cursor.execute(sql, valores)
             
@@ -144,6 +159,9 @@ def cadastro():
             
     return render_template('cadastro.html')
 
+# =========================================================================
+# === MÓDULOS ADMINISTRATIVOS PROTEGIDOS POR ISOLAMENTO DE ROTAS ===
+# =========================================================================
 @app.route('/admin/desbloqueio')
 def admin_desbloqueio():
     # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
@@ -163,7 +181,7 @@ def admin_usuarios():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # Busca com a auditoria de responsável incluída
+    # Busca com a auditoria de responsável incluída para listar no painel
     cursor.execute("SELECT num_usuario, nome, email, perfil, id_status, ip_origem, ultimo_ip_bloqueio, responsavel_desbloqueio FROM usuario")
     usuarios_banco = cursor.fetchall()
     conn.close()
@@ -171,9 +189,8 @@ def admin_usuarios():
     return render_template('usuario.html', lista=usuarios_banco)
 
 # =========================================================================
-# NOVAS ROTAS: SISTEMA DE DESBLOQUEIO E RASTREIO DE IP
+# === SISTEMA DE ENDPOINTS: CONSULTA DINÂMICA DE RASTREAMENTO ===
 # =========================================================================
-
 @app.route('/buscar_ip_bloqueio', methods=['POST'])
 def buscar_ip_bloqueio():
     # === ISOLAMENTO DE API (BACKEND LOCKDOWN) ===
@@ -196,7 +213,7 @@ def buscar_ip_bloqueio():
         resultado = cursor.fetchone()
         conn.close()
         
-        # Retorna o IP dinâmico ou o status limpo para o front-end
+        # Retorna o IP dinâmico ou o status limpo capturado pelo proxy do Render para o front-end
         if resultado and resultado['ultimo_ip_bloqueio']:
             return jsonify({'ip': resultado['ultimo_ip_bloqueio']})
         
@@ -218,7 +235,7 @@ def finalizar_desbloqueio():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # RESET LÓGICO COMPLETO: Grava o responsável (LS, AR, EM) e limpa as travas
+    # RESET LÓGICO COMPLETO: Grava o responsável pela auditoria (LS, AR, EM) e limpa as restrições lógicas
     cursor.execute("""
         UPDATE usuario 
         SET id_status = 1, 
@@ -236,14 +253,13 @@ def finalizar_desbloqueio():
 # === ROTA ADICIONAL: ENCERRAMENTO SEGURO DE PRIVILÉGIOS (TERMINAÇÃO DE CONEXÃO) ===
 @app.route('/logout')
 def logout():
-    # Destrói a sessão de forma segura limpando as chaves de acesso da memória RAM
+    # Destrói a sessão de forma segura limpando as chaves de acesso alocadas na memória RAM do servidor
     session.clear()
     return redirect(url_for('login'))
 
 # =========================================================================
-# ROTA DE RECUPERAÇÃO DE SENHA (NEXUS CORE)
+# === ROTA DE RECUPERAÇÃO DE SENHA (NEXUS CORE) ===
 # =========================================================================
-
 @app.route('/recuperacao', methods=['GET', 'POST'])
 def recuperacao():
     if request.method == 'POST':
