@@ -43,61 +43,54 @@ def login():
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             
-            # Busca o usuário pelo e-mail para avaliar o estado da conta
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
+            # 1️⃣ CENÁRIO: O usuário existe no banco de dados
             if user:
                 if user.get('id_status') == 2:
-                    # Adicionado trava_demo para quando o usuário já se encontra na lista de bloqueados
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
-                # === COMPARAÇÃO DA SENHA CRIPTOGRAFADA VIA BACKEND (CORRIGIDO) ===
-                # Transforma a string recebida do HTML e o hash do banco em bytes para a validação do algoritmo.
+                # Comparação da senha criptografada via Bcrypt
                 senha_digitada_bytes = senha.encode('utf-8')
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
-                # O Bcrypt extrai o Salt do próprio hash do banco e faz a validação matemática segura.
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
-                    # Sucesso: Reseta o contador de tentativas falhas caso o usuário acerte a credencial
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
-                    
-                    # Cria as variáveis de sessão na memória RAM do servidor
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
                     
-                    # REGRA DE GOVERNANÇA: O roteamento é determinado estritamente pelas credenciais validadas no banco de dados.
-                    # Perfil == 1 (Admin) acessa o dashboard; Perfil Comum é redirecionado para fora do escopo administrativo.
                     if session['perfil'] == 1:
                         return redirect(url_for('admin_desbloqueio'))
                     else:
                         return redirect('https://www.google.com')
                 
+                # 2️⃣ CENÁRIO: O e-mail existe, mas a senha está errada
                 else:
-                    # Senha incorreta: Incrementa o contador de tentativas falhas
                     novas_tentativas = user['tentativas'] + 1
                     
-                    # CAPTURA DO IP REAL (Trata o proxy reverso do Render ou fallback local)
                     if request.headers.getlist("X-Forwarded-For"):
                         ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
                     else:
                         ip_atual = request.remote_addr
                     
-                    # Se atingir o limite de 5 erros, a conta sofre um bloqueio lógico preventivo
                     if novas_tentativas >= 5:
-                        # GATILHO DE SEGURANÇA: Muda o status para 2 (bloqueado) e carimba o IP do atacante
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
                         return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
                     else:
-                        # Apenas atualiza o número de erros atuais na tabela usuario
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
-                        return render_template('login.html', erro=True, email_digitado=email, trava_demo=True)
+                        # MODIFICAÇÃO: Retorna especificamente 'senha_incorreta=True'
+                        return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
+            
+            # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
             else:
-                return render_template('login.html', erro=True, email_digitado=email, trava_demo=True)
+                # MODIFICAÇÃO: Retorna especificamente 'conta_inexistente=True'
+                return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
+
     except Exception as e:
         print(f"Erro no login: {e}")
         return render_template('login.html', db_error=True)
@@ -114,7 +107,23 @@ def cadastro():
         num_usuario = request.form.get('num_usuario')
         nome = request.form.get('nome')
         email = request.form.get('email')
-        cpf = request.form.get('cpf').replace('.', '').replace('-', '') 
+        
+        # === CAPTURA DO CPF PARA VALIDAÇÃO DE TAMANHO ===
+        # Captura o valor exatamente do jeito que veio do HTML (com os pontos e hífens da máscara)
+        cpf_enviado = request.form.get('cpf', '')
+        
+        # === TRAVA DE SEGURANÇA (MÍNIMO 11 E MÁXIMO 14 CARACTERES) ===
+        # Valida se o comprimento da string está dentro do limite exigido pelas regras de negócio.
+        # Se falhar, interrompe o fluxo imediatamente antes de tocar no banco de dados.
+        tamanho_cpf = len(cpf_enviado)
+        if tamanho_cpf < 11 or tamanho_cpf > 14:
+            return f"<h1>Erro de Validação: O CPF deve conter entre 11 e 14 caracteres! (Digitado: {tamanho_cpf})</h1><a href='/cadastro'>Voltar</a>"
+
+        # === ATUALIZAÇÃO REQUISITADA: PRESERVAÇÃO DA MÁSCARA ===
+        # Atribui o CPF enviado diretamente para a variável que vai para o banco de dados.
+        # Com isso, os pontos e o hífen gerados pelo JavaScript preenchem a coluna varchar(14).
+        cpf = cpf_enviado 
+        
         telefone = request.form.get('telefone')
         senha = request.form.get('senha')
         repetir_senha = request.form.get('repetir_senha')
@@ -140,11 +149,11 @@ def cadastro():
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # CORREÇÃO: Alinhamento de colunas e marcadores %s (Eram 8 colunas mapeadas para 7 valores)
+            # ESTRUTURA DML: Alinhamento de colunas para inserção segura no banco de dados
             sql = """INSERT INTO usuario (num_usuario, nome, email, senha_hash, cpf, telefone, perfil, id_status, data, ip_origem) 
                      VALUES (%s, %s, %s, %s, %s, %s, 0, 1, CURDATE(), %s)"""
             
-            # Envia a senha mascarada (hash), mantendo o CPF e Telefone normais em texto limpo
+            # Envia os dados consolidados, mantendo agora o CPF formatado visualmente no banco
             valores = (num_usuario, nome, email, senha_criptografada, cpf, telefone, ip_cadastro)
             cursor.execute(sql, valores)
             

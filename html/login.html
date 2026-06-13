@@ -46,17 +46,24 @@
         </div>
     </div>
 
-    {% if erro or bloqueado %}
+    {% if senha_incorreta or conta_inexistente or bloqueado %}
     <div id="modalErro" class="fundo-modal">
         <div class="balao-glass">
+            
             {% if bloqueado %}
                 <i class="fa-solid fa-user-lock" style="color: #ff3e3e;"></i>
                 <h3>Acesso Bloqueado</h3>
                 <p>Esta conta foi suspensa por excesso de tentativas. <br><strong>Entre em contato com o suporte técnico.</strong></p>
+            
+            {% elif conta_inexistente %}
+                <i class="fa-solid fa-user-xmark" style="color: #ff9f43;"></i>
+                <h3>CONTA INEXISTENTE</h3>
+                <p>O e-mail informado não possui registro em nosso banco de dados. <br>Verifique a grafia ou faça o cadastro para acessar.</p>
+            
             {% else %}
                 <i class="fa-solid fa-triangle-exclamation"></i>
-                <h3>Senha Incorreta</h3>
-                <p>As credenciais informadas não coincidem com nossos banco de dados. Faça o cadastro para acessar ou entre em contato com o administrador.</p>
+                <h3>SENHA INCORRETA</h3>
+                <p>As credenciais informadas não coincidem com nosso banco de dados. <br>Por favor, tente novamente ou entre em contato com o administrador.</p>
             {% endif %}
             
             <button onclick="liberarAcesso()" class="botao-concordo">Concordo</button>
@@ -68,14 +75,12 @@
     document.addEventListener("DOMContentLoaded", function() {
         
         // --- 1. LÓGICA DO BALÃO ---
-        // Atualizado para buscar a classe .balao-glass
         const balao = document.querySelector('.balao-glass');
         const inputEmail = document.getElementById('inputEmail');
         const inputSenha = document.getElementById('inputSenha');
         const botaoLogin = document.getElementById('btn-login');
 
         if (balao) {
-            // Atualizado para as novas classes de posição em português do login.css
             const posicoes = ['posicao-centro', 'posicao-superior-esquerda', 'posicao-superior-direita', 'posicao-inferior-esquerda', 'posicao-inferior-direita'];
             const sorteio = Math.floor(Math.random() * posicoes.length);
             balao.classList.add(posicoes[sorteio]);
@@ -108,7 +113,7 @@
 
         if (modal) modal.style.display = 'none';
         
-        // --- 2. TRAVA DE 10 SEGUNDOS (Movida para disparar RIGOROSAMENTE apenas após o "Concordo") ---
+        // --- 2. TRAVA DE 10 SEGUNDOS ---
         if (deveTravar === "True" && botaoLogin) {
             let contagem = 10;
             
@@ -119,7 +124,6 @@
                 if (contagem < 0) {
                     clearInterval(timer);
                     
-                    // Liberação total do sistema após o término dos 10 segundos da trava
                     if (email) email.disabled = false;
                     if (senha) {
                         senha.disabled = false;
@@ -136,7 +140,6 @@
             }, 1000);
             
         } else {
-            // Caso não precise travar, libera imediatamente ao fechar o modal
             if (email) email.disabled = false;
             if (senha) {
                 senha.disabled = false;

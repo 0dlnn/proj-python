@@ -31,7 +31,12 @@
 
             <div class="grupo-entrada">
                 <i class="fa-solid fa-address-card"></i>
-                <input type="text" name="cpf" placeholder="CPF" required> 
+                <input type="text" 
+                       name="cpf" 
+                       placeholder="CPF (000.000.000-00)" 
+                       maxlength="14" 
+                       oninput="mascaraCPF(this)" 
+                       required> 
             </div>
 
             <div class="grupo-entrada">
@@ -63,11 +68,29 @@
     </div>
 
     <script>
-        // Gera um número aleatório de 6 dígitos para o ID do usuário
+        // Gera um número aleatório de 6 dígitos para o ID do usuário ao carregar a página
         window.onload = function() {
             const randomNum = Math.floor(100000 + Math.random() * 900000);
             document.getElementById('idAutomatico').value = randomNum;
         };
+
+        // === SCRIPT DE INTERCEPTAÇÃO DE TECLADO: COMPLEMENTAÇÃO AUTOMÁTICA DE PONTOS E HÍFEN ===
+        function mascaraCPF(campo) {
+            // 1. Limpa qualquer entrada não numérica enviada para a caixa de texto
+            let valor = campo.value.replace(/\D/g, "");
+            
+            // 2. Aplica o primeiro ponto de separação após a primeira tríade de algarismos
+            valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+            
+            // 3. Aplica o segundo ponto de separação após a segunda sequência de 3 números
+            valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+            
+            // 4. Aplica o hífen delimitador antes dos últimos 2 dígitos verificadores do documento
+            valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            
+            // 5. cospe a string tratada de volta para renderização dinâmica no navegador
+            campo.value = valor;
+        }
     </script>
 
 </body>
