@@ -83,9 +83,9 @@
         if (balao) {
             const posicoes = ['posicao-centro', 'posicao-superior-esquerda', 'posicao-superior-direita', 'posicao-inferior-esquerda', 'posicao-inferior-direita'];
             const sorteio = Math.floor(Math.random() * posicoes.length);
-            balao.classList.add(posicoes[sorteio]);
+            baba = balao.classList.add(posicoes[sorteio]);
 
-            // Trava os campos para a demonstração
+            // Trava os campos para a demonstração forense
             if (inputEmail) inputEmail.disabled = true;
             if (inputSenha) {
                 inputSenha.disabled = true;
@@ -103,7 +103,7 @@
         }
     });
 
-    // --- 3. FUNÇÃO DE LIBERAÇÃO ---
+    // --- 3. FUNÇÃO DE LIBERAÇÃO DE INTERFACE ---
     function liberarAcesso() {
         const modal = document.getElementById('modalErro');
         const email = document.getElementById('inputEmail');
@@ -113,23 +113,30 @@
 
         if (modal) modal.style.display = 'none';
         
-        // --- 2. TRAVA DE 10 SEGUNDOS ---
+        // Garante que os inputs fiquem imediatamente reativos para digitação
+        if (email) email.disabled = false;
+        if (senha) {
+            senha.disabled = false;
+            senha.value = '';
+            senha.focus();
+        }
+        
+        // --- TRAVA CRONOMETRADA DO BOTÃO ENTRAR ---
         if (deveTravar === "True" && botaoLogin) {
             let contagem = 10;
             
+            // Força o estado bloqueado visualmente durante o timer
+            botaoLogin.disabled = true;
+            botaoLogin.style.opacity = "0.6";
+            botaoLogin.style.filter = "grayscale(100%)";
+            botaoLogin.style.cursor = "not-allowed";
+
             const timer = setInterval(() => {
                 botaoLogin.innerText = `AGUARDE (${contagem}s)`;
                 contagem--;
 
                 if (contagem < 0) {
                     clearInterval(timer);
-                    
-                    if (email) email.disabled = false;
-                    if (senha) {
-                        senha.disabled = false;
-                        senha.value = '';
-                        senha.focus();
-                    }
                     
                     botaoLogin.disabled = false;
                     botaoLogin.style.opacity = "1";
@@ -140,12 +147,6 @@
             }, 1000);
             
         } else {
-            if (email) email.disabled = false;
-            if (senha) {
-                senha.disabled = false;
-                senha.value = '';
-                senha.focus();
-            }
             if (botaoLogin) {
                 botaoLogin.disabled = false;
                 botaoLogin.style.opacity = "1";
