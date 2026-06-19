@@ -88,6 +88,15 @@ def login():
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
                     # Sucesso: Zera o contador de falhas na tabela usuario
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
+                    
+                    # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (LOGIN COM SUCESSO) ===
+                    sql_sucesso_log = """
+                        INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                        VALUES (%s, 1, 1, %s)
+                    """
+                    msg_sucesso = f"LOGIN: Acesso concedido e autenticado para o usuario {email}."
+                    cursor.execute(sql_sucesso_log, (msg_sucesso, numero_tentativa_log))
+                    
                     conn.commit()
                     
                     session['user_id'] = user['num_usuario']
@@ -123,6 +132,14 @@ def login():
                         motivo_bloqueio = "Excesso de tentativas de login (Brute-Force)"
                         cursor.execute(sql_historico_bloqueio, (novas_tentativas, motivo_bloqueio))
                         
+                        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (BLOQUEIO ATIVADO) ===
+                        sql_log_bloqueio_atividade = """
+                            INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                            VALUES (%s, 2, 1, %s)
+                        """
+                        msg_bloqueio_atividade = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email}"
+                        cursor.execute(sql_log_bloqueio_atividade, (msg_bloqueio_atividade, novas_tentativas))
+                        
                         conn.commit()
                         cursor.close()
                         conn.close()
@@ -131,6 +148,15 @@ def login():
                     else:
                         # Apenas updates o contador de tentativas do usuário
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+                        
+                        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (TENTATIVA DE LOGIN INCORRETA) ===
+                        sql_log_erro_atividade = """
+                            INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                            VALUES (%s, 2, 1, %s)
+                        """
+                        msg_erro_atividade = f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email}"
+                        cursor.execute(sql_log_erro_atividade, (msg_erro_atividade, novas_tentativas))
+                        
                         conn.commit()
                         cursor.close()
                         conn.close()
@@ -138,6 +164,15 @@ def login():
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
             else:
+                # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (CONTA INEXISTENTE) ===
+                sql_log_inexistente = """
+                    INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                    VALUES (%s, 2, 1, %s)
+                """
+                msg_inexistente = f"TENTATIVA DE LOGIN: Usuario nao registrado tentou acesso com o e-mail: {email}"
+                cursor.execute(sql_log_inexistente, (msg_inexistente, numero_tentativa_log))
+                
+                conn.commit()
                 cursor.close()
                 conn.close()
                 return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
@@ -225,9 +260,19 @@ def cadastro():
 @app.route('/admin/desbloqueio')
 def admin_desbloqueio():
     # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
-    # Verifica se a sessão do ID existe e valida se o privilégio corresponde a Administrador (1).
+    # Verifica se a sessão do ID existe e valida se o privilégio corresponds a Administrador (1).
     # Caso tente forçar o acesso inserindo a URL direto na barra, o sistema rejeita e joga pro login.
     if 'user_id' not in session or session.get('perfil') != 1: 
+        # === AUDITORIA EXTRA: ACESSO NEGADO ===
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
+            cursor.execute(sql_negado, ("ACESSO NEGADO: Tentativa de invasao na rota /admin/desbloqueio",))
+            conn.commit()
+            cursor.close()
+            conn.close()
+        except: pass
         return redirect(url_for('login'))
     return render_template('desbloqueio.html')
 
@@ -235,6 +280,16 @@ def admin_desbloqueio():
 def admin_log_activity():
     # BARREIRA DE PROTEÇÃO: Impede usuários comuns de acessarem os logs de auditoria
     if 'user_id' not in session or session.get('perfil') != 1:
+        # === AUDITORIA EXTRA: ACESSO NEGADO ===
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
+            cursor.execute(sql_negado, ("ACESSO NEGADO: Tentativa de invasao na rota /admin/log_atividade",))
+            conn.commit()
+            cursor.close()
+            conn.close()
+        except: pass
         return redirect(url_for('login'))
         
     conn = get_db_connection()
@@ -243,7 +298,7 @@ def admin_log_activity():
     # Busca os logs trazendo a descrição e amarrando com as tentativas de login para auditoria
     cursor.execute("""
         SELECT num_log, descricao, id_status, id_tipo, num_tentativa 
-        FROM log_activity 
+        FROM log_atividade 
         ORDER BY num_log DESC
     """)
     logs_banco = cursor.fetchall()
@@ -257,6 +312,16 @@ def admin_usuarios():
     # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
     # Impede operadores não autenticados ou usuários padrão de acessar o inventário de monitoramento.
     if 'user_id' not in session or session.get('perfil') != 1:
+        # === AUDITORIA EXTRA: ACESSO NEGADO ===
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
+            cursor.execute(sql_negado, ("ACESSO NEGADO: Tentativa de invasao na rota /admin/usuarios",))
+            conn.commit()
+            cursor.close()
+            conn.close()
+        except: pass
         return redirect(url_for('login'))
         
     conn = get_db_connection()
@@ -348,6 +413,14 @@ def finalizar_desbloqueio():
             VALUES (CURDATE(), %s, %s)
         """
         cursor.execute(sql_historico, (sigla_responsavel, id_bloqueio_vinculado))
+        
+        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (DESBLOQUEIO CONCLUÍDO) ===
+        sql_log_desbloqueio_atividade = """
+            INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+            VALUES (%s, 1, 2, NULL)
+        """
+        msg_desbloqueio_atividade = f"DESBLOQUEIO: Administrador {sigla_responsavel} realizou a reativacao da conta do usuario #{id_usuario}"
+        cursor.execute(sql_log_desbloqueio_atividade, (msg_desbloqueio_atividade,))
         
         conn.commit()
         print(f"[AUDITORIA LOG] Usuário #{id_usuario} reativado com sucesso por {sigla_responsavel}. Histórico gravado.")

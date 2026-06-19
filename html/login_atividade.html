@@ -26,9 +26,9 @@
                 <thead>
                     <tr>
                         <th>ID LOG</th>
+                        <th>CATEGORIA</th>
                         <th>DESCRIÇÃO DA ATIVIDADE</th>
                         <th>STATUS</th>
-                        <th>TIPO</th>
                         <th>Nº TENTATIVA</th>
                     </tr>
                 </thead>
@@ -37,19 +37,25 @@
                         {% for log in lista_logs %}
                         <tr>
                             <td class="col-id">#{{ log.num_log }}</td>
+                            <td>
+                                {% if "BLOQUEIO" in log.descricao %}
+                                    <span class="badge tag-bloqueio">BLOQUEIO</span>
+                                {% elif "DESBLOQUEIO" in log.descricao %}
+                                    <span class="badge tag-desbloqueio">DESBLOQUEIO</span>
+                                {% elif "TENTATIVA DE LOGIN" in log.descricao %}
+                                    <span class="badge tag-tentativa">TENTATIVA DE LOGIN</span>
+                                {% elif "ACESSO NEGADO" in log.descricao %}
+                                    <span class="badge tag-negado">ACESSO NEGADO</span>
+                                {% else %}
+                                    <span class="badge tag-sistema">SISTEMA</span>
+                                {% endif %}
+                            </td>
                             <td class="col-descricao">{{ log.descricao }}</td>
                             <td>
                                 {% if log.id_status == 1 %}
                                     <span class="badge status-sucesso">SUCESSO</span>
                                 {% else %}
-                                    <span class="badge status-falha">ALERTA/FALHA</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if log.id_tipo == 1 %}
-                                    <span class="badge tipo-autenticacao">AUTENTICAÇÃO</span>
-                                {% else %}
-                                    <span class="badge tipo-admin">ADMINISTRATIVO</span>
+                                    <span class="badge status-falha">ALERTA</span>
                                 {% endif %}
                             </td>
                             <td class="col-tentativa">

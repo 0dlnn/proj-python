@@ -1,4 +1,6 @@
-/* Configurações Gerais e Paleta de Cores do Sistema */
+/* =========================================================================
+   === CONFIGURAÇÕES GERAIS E PARAMETRIZAÇÃO DE ESTRUTURA ===
+   ========================================================================= */
 * {
     margin: 0;
     padding: 0;
@@ -15,10 +17,12 @@ body {
     padding: 20px;
 }
 
-/* Container Principal do Painel */
+/* =========================================================================
+   === CONTAINER PRINCIPAL DO PAINEL DE CONTROLE ===
+   ========================================================================= */
 .container-painel {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1150px;
     background-color: rgba(54, 38, 48, 0.85);
     border-radius: 24px;
     padding: 40px;
@@ -26,7 +30,9 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Menu Superior de Abas de Navegação */
+/* =========================================================================
+   === MENU SUPERIOR DE NAVEGAÇÃO POR ABAS ===
+   ========================================================================= */
 .menu-superior {
     display: flex;
     justify-content: center;
@@ -65,7 +71,9 @@ body {
     background-color: rgba(229, 115, 115, 0.1);
 }
 
-/* Cabeçalho Técnico */
+/* =========================================================================
+   === CABEÇALHO DA CENTRAL TÉCNICA ===
+   ========================================================================= */
 .cabecalho-central {
     text-align: center;
     margin-bottom: 35px;
@@ -76,6 +84,7 @@ body {
     font-size: 28px;
     letter-spacing: 1px;
     margin-bottom: 10px;
+    text-transform: uppercase;
 }
 
 .cabecalho-central p {
@@ -83,7 +92,9 @@ body {
     font-size: 14px;
 }
 
-/* Estrutura da Tabela de Auditoria */
+/* =========================================================================
+   === GRID DA TABELA DE AUDITORIA FORENSE ===
+   ========================================================================= */
 .container-tabela {
     width: 100%;
     background-color: rgba(38, 25, 34, 0.7);
@@ -114,6 +125,7 @@ body {
     color: #e2d5de;
     font-size: 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    vertical-align: middle;
 }
 
 .tabela-logs tr:last-child td {
@@ -124,7 +136,9 @@ body {
     background-color: rgba(255, 255, 255, 0.02);
 }
 
-/* Estilização das Colunas de Dados */
+/* =========================================================================
+   === ESTILIZAÇÃO ESPECÍFICA DAS COLUNAS ===
+   ========================================================================= */
 .col-id {
     font-weight: 700;
     color: #b5a6b0;
@@ -132,6 +146,7 @@ body {
 
 .col-descricao {
     font-weight: 500;
+    letter-spacing: 0.3px;
 }
 
 .col-tentativa {
@@ -139,14 +154,18 @@ body {
     text-align: center;
 }
 
-/* Badges de Status e Tipo ( Cybersecurity Style ) */
+/* =========================================================================
+   === BADGES BASE DE STATUS E TIPOS ===
+   ========================================================================= */
 .badge {
     display: inline-block;
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 30px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.5px;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .status-sucesso {
@@ -161,26 +180,49 @@ body {
     border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
-.tipo-autenticacao {
-    background-color: rgba(33, 150, 243, 0.15);
-    color: #64b5f6;
-    border: 1px solid rgba(33, 150, 243, 0.3);
+/* =========================================================================
+   === BADGES DAS NOVAS CATEGORIAS EM CAIXA ALTA (CYBERSECURITY SOC STYLE) ===
+   ========================================================================= */
+.tag-bloqueio {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: #ff8a80;
+    border: 1px solid rgba(244, 67, 54, 0.4);
 }
 
-.tipo-admin {
-    background-color: rgba(156, 39, 176, 0.15);
-    color: #ba68c8;
-    border: 1px solid rgba(156, 39, 176, 0.3);
+.tag-desbloqueio {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #b9f6ca;
+    border: 1px solid rgba(76, 175, 80, 0.4);
 }
 
+.tag-tentativa {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: #ffd180;
+    border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+.tag-negado {
+    background-color: rgba(216, 27, 96, 0.25);
+    color: #ff80ab;
+    border: 1px solid rgba(216, 27, 96, 0.45);
+}
+
+.tag-sistema {
+    background-color: rgba(158, 158, 158, 0.15);
+    color: #cfd8dc;
+    border: 1px solid rgba(158, 158, 158, 0.3);
+}
+
+/* =========================================================================
+   === ELEMENTOS EXCEPCIONAIS E RODAPÉ ===
+   ========================================================================= */
 .sem-dados {
     text-align: center;
     color: #b5a6b0;
     font-style: italic;
-    padding: 30px !important;
+    padding: 40px !important;
 }
 
-/* Rodapé de Identificação do Perfil */
 .rodape-admin {
     text-align: center;
     color: #9c8e98;
@@ -188,4 +230,5 @@ body {
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
+    margin-top: 5px;
 }
