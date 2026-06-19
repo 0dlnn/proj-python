@@ -163,6 +163,7 @@ def login():
                         conn.commit()
                         cursor.close()
                         conn.close()
+                        # CORRIGIDO: Retorno explícito adicionado para renderizar o erro da tentativa malsucedida intermediária
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
