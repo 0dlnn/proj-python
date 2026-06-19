@@ -64,7 +64,7 @@ def login():
             # Se o usuário existe, a tentativa atual é o número que já está no banco + 1, se não existir, define como 1
             numero_tentativa_log = (user['tentativas'] + 1) if user else 1
 
-           # === PERSISTÊNCIA RIGOROSA NA TABELA 'LOGIN' (ALINHADO COM O WORKBENCH) ===
+           # === PERSISTÊNCIA RIGOROSA NA TABELA 'LOGIN' (ALINHADO WITH O WORKBENCH) ===
             # Mapeia exatamente as colunas do print: num_tentativa, ip_origem, agente_usuario, num_usuario, data
             sql_log_login = """
                 INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data) 
@@ -89,12 +89,13 @@ def login():
                     # Sucesso: Zera o contador de falhas na tabela usuario
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     
-                    # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (LOGIN COM SUCESSO) ===
+                    # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (LOGIN COM SUCESSO E DATA/HORA) ===
+                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                     sql_sucesso_log = """
                         INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
                         VALUES (%s, 1, 1, %s)
                     """
-                    msg_sucesso = f"LOGIN: Acesso concedido e autenticado para o usuario {email}."
+                    msg_sucesso = f"LOGIN: Acesso concedido e autenticado para o usuario {email} em {agora}."
                     cursor.execute(sql_sucesso_log, (msg_sucesso, numero_tentativa_log))
                     
                     conn.commit()
@@ -132,12 +133,13 @@ def login():
                         motivo_bloqueio = "Excesso de tentativas de login (Brute-Force)"
                         cursor.execute(sql_historico_bloqueio, (novas_tentativas, motivo_bloqueio))
                         
-                        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (BLOQUEIO ATIVADO) ===
+                        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (BLOQUEIO ATIVADO E DATA/HORA) ===
+                        agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                         sql_log_bloqueio_atividade = """
                             INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
                             VALUES (%s, 2, 1, %s)
                         """
-                        msg_bloqueio_atividade = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email}"
+                        msg_bloqueio_atividade = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}"
                         cursor.execute(sql_log_bloqueio_atividade, (msg_bloqueio_atividade, novas_tentativas))
                         
                         conn.commit()
@@ -149,12 +151,13 @@ def login():
                         # Apenas updates o contador de tentativas do usuário
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         
-                        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (TENTATIVA DE LOGIN INCORRETA) ===
+                        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (TENTATIVA DE LOGIN INCORRETA E DATA/HORA) ===
+                        agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                         sql_log_erro_atividade = """
                             INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
                             VALUES (%s, 2, 1, %s)
                         """
-                        msg_erro_atividade = f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email}"
+                        msg_erro_atividade = f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}"
                         cursor.execute(sql_log_erro_atividade, (msg_erro_atividade, novas_tentativas))
                         
                         conn.commit()
@@ -164,12 +167,13 @@ def login():
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
             else:
-                # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (CONTA INEXISTENTE) ===
+                # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (CONTA INEXISTENTE E DATA/HORA) ===
+                agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                 sql_log_inexistente = """
                     INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
                     VALUES (%s, 2, 1, %s)
                 """
-                msg_inexistente = f"TENTATIVA DE LOGIN: Usuario nao registrado tentou acesso com o e-mail: {email}"
+                msg_inexistente = f"TENTATIVA DE LOGIN: Usuario nao registrado tentou acesso com o e-mail: {email} em {agora}"
                 cursor.execute(sql_log_inexistente, (msg_inexistente, numero_tentativa_log))
                 
                 conn.commit()
@@ -263,12 +267,16 @@ def admin_desbloqueio():
     # Verifica se a sessão do ID existe e valida se o privilégio corresponds a Administrador (1).
     # Caso tente forçar o acesso inserindo a URL direto na barra, o sistema rejeita e joga pro login.
     if 'user_id' not in session or session.get('perfil') != 1: 
-        # === AUDITORIA EXTRA: ACESSO NEGADO ===
+        # === AUDITORIA EXTRA: ACESSO NEGADO COM IDENTIFICAÇÃO E DATA/HORA ===
         try:
+            agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            quem_tentou = f"Usuario ID #{session['user_id']}" if 'user_id' in session else "Acesso Anonimo"
+            
             conn = get_db_connection()
             cursor = conn.cursor()
             sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
-            cursor.execute(sql_negado, ("ACESSO NEGADO: Tentativa de invasao na rota /admin/desbloqueio",))
+            msg_negado = f"ACESSO NEGADO: {quem_tentou} tentou forcar entrada na rota /admin/desbloqueio em {agora}"
+            cursor.execute(sql_negado, (msg_negado,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -280,12 +288,16 @@ def admin_desbloqueio():
 def admin_log_activity():
     # BARREIRA DE PROTEÇÃO: Impede usuários comuns de acessarem os logs de auditoria
     if 'user_id' not in session or session.get('perfil') != 1:
-        # === AUDITORIA EXTRA: ACESSO NEGADO ===
+        # === AUDITORIA EXTRA: ACESSO NEGADO COM IDENTIFICAÇÃO E DATA/HORA ===
         try:
+            agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            quem_tentou = f"Usuario ID #{session['user_id']}" if 'user_id' in session else "Acesso Anonimo"
+            
             conn = get_db_connection()
             cursor = conn.cursor()
             sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
-            cursor.execute(sql_negado, ("ACESSO NEGADO: Tentativa de invasao na rota /admin/log_atividade",))
+            msg_negado = f"ACESSO NEGADO: {quem_tentou} tentou forcar entrada na rota /admin/log_atividade em {agora}"
+            cursor.execute(sql_negado, (msg_negado,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -312,12 +324,16 @@ def admin_usuarios():
     # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
     # Impede operadores não autenticados ou usuários padrão de acessar o inventário de monitoramento.
     if 'user_id' not in session or session.get('perfil') != 1:
-        # === AUDITORIA EXTRA: ACESSO NEGADO ===
+        # === AUDITORIA EXTRA: ACESSO NEGADO COM IDENTIFICAÇÃO E DATA/HORA ===
         try:
+            agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            quem_tentou = f"Usuario ID #{session['user_id']}" if 'user_id' in session else "Acesso Anonimo"
+            
             conn = get_db_connection()
             cursor = conn.cursor()
             sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
-            cursor.execute(sql_negado, ("ACESSO NEGADO: Tentativa de invasao na rota /admin/usuarios",))
+            msg_negado = f"ACESSO NEGADO: {quem_tentou} tentou forcar entrada na rota /admin/usuarios em {agora}"
+            cursor.execute(sql_negado, (msg_negado,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -414,12 +430,13 @@ def finalizar_desbloqueio():
         """
         cursor.execute(sql_historico, (sigla_responsavel, id_bloqueio_vinculado))
         
-        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (DESBLOQUEIO CONCLUÍDO) ===
+        # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (DESBLOQUEIO CONCLUÍDO E DATA/HORA) ===
+        agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         sql_log_desbloqueio_atividade = """
             INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
             VALUES (%s, 1, 2, NULL)
         """
-        msg_desbloqueio_atividade = f"DESBLOQUEIO: Administrador {sigla_responsavel} realizou a reativacao da conta do usuario #{id_usuario}"
+        msg_desbloqueio_atividade = f"DESBLOQUEIO: Administrador {sigla_responsavel} realizou a reativacao da conta do usuario #{id_usuario} em {agora}"
         cursor.execute(sql_log_desbloqueio_atividade, (msg_desbloqueio_atividade,))
         
         conn.commit()
