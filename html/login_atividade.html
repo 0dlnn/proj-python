@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Core - Log de Atividades</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='log_atividade.css') }}">
+</head>
+<body>
+
+    <div class="container-painel">
+        <div class="menu-superior">
+            <a href="/admin/desbloqueio" class="aba">🔒 DESBLOQUEIO</a>
+            <a href="/admin/log_atividade" class="aba active">📋 LOG DE ATIVIDADES</a>
+            <a href="/admin/usuarios" class="aba">👥 USUÁRIOS</a>
+            <a href="/logout" class="aba sair">➔ SAIR</a>
+        </div>
+
+        <div class="cabecalho-central">
+            <h2>AUDITORIA DE LOGS DO SISTEMA</h2>
+            <p>Monitoramento forense de tráfego, falhas de autenticação e ações administrativas.</p>
+        </div>
+
+        <div class="container-tabela">
+            <table class="tabela-logs">
+                <thead>
+                    <tr>
+                        <th>ID LOG</th>
+                        <th>DESCRIÇÃO DA ATIVIDADE</th>
+                        <th>STATUS</th>
+                        <th>TIPO</th>
+                        <th>Nº TENTATIVA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if lista_logs %}
+                        {% for log in lista_logs %}
+                        <tr>
+                            <td class="col-id">#{{ log.num_log }}</td>
+                            <td class="col-descricao">{{ log.descricao }}</td>
+                            <td>
+                                {% if log.id_status == 1 %}
+                                    <span class="badge status-sucesso">SUCESSO</span>
+                                {% else %}
+                                    <span class="badge status-falha">ALERTA/FALHA</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.id_tipo == 1 %}
+                                    <span class="badge tipo-autenticacao">AUTENTICAÇÃO</span>
+                                {% else %}
+                                    <span class="badge tipo-admin">ADMINISTRATIVO</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-tentativa">
+                                {{ log.num_tentativa if log.num_tentativa else '-' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="sem-dados">Nenhum registro de atividade encontrado na base Nexus.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="rodape-admin">
+            <span>MODO ADMINISTRADOR</span>
+        </div>
+    </div>
+
+</body>
+</html>
