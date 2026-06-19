@@ -46,17 +46,17 @@
 
             <div class="grupo-entrada">
                 <i class="fa-solid fa-phone"></i>
-                <input type="tel" name="telefone" placeholder="Telefone" required> 
+                <input type="tel" name="telefone" placeholder="Telefone" maxlength="20" oninput="mascaraTelefone(this)" required> 
             </div>
 
             <div class="grupo-entrada">
                 <i class="fa-solid fa-lock"></i>
-                <input type="password" name="senha" placeholder="Senha" required>
+                <input type="password" name="senha" placeholder="Senha" maxlength="255" required>
             </div>
 
             <div class="grupo-entrada">
                 <i class="fa-solid fa-shield-halved"></i>
-                <input type="password" name="repetir_senha" placeholder="Repetir Senha" required>
+                <input type="password" name="repetir_senha" placeholder="Repetir Senha" maxlength="255" required>
             </div>
 
             <button type="submit" class="botao-cadastro">FINALIZAR CADASTRO</button>
@@ -75,6 +75,7 @@
         };
 
         // === SCRIPT DE INTERCEPTAÇÃO DE TECLADO: COMPLEMENTAÇÃO AUTOMÁTICA DE PONTOS E HÍFEN ===
+        document.getElementById('idAutomatico').value = randomNum;
         function mascaraCPF(campo) {
             // 1. Limpa qualquer entrada não numérica enviada para a caixa de texto
             let valor = campo.value.replace(/\D/g, "");
@@ -90,6 +91,26 @@
             
             // 5. cospe a string tratada de volta para renderização dinâmica no navegador
             campo.value = valor;
+        }
+
+        // === NOVO: COMPLEMENTAÇÃO AUTOMÁTICA DE PARÊNTESES, ESPAÇO E TRAÇO DO TELEFONE ===
+        function mascaraTelefone(input) {
+            let valor = input.value.replace(/\D/g, "");
+            
+            if (valor.length > 0) {
+                valor = "(" + valor;
+                if (valor.length > 3) {
+                    valor = valor.slice(0, 3) + ") " + valor.slice(3);
+                }
+                if (valor.length > 10) {
+                    // Formato para celular: (DD) 9XXXX-XXXX
+                    valor = valor.slice(0, 10) + "-" + valor.slice(10, 14);
+                } else if (valor.length > 9) {
+                    // Formato para fixo: (DD) XXXX-XXXX
+                    valor = valor.slice(0, 9) + "-" + valor.slice(9);
+                }
+            }
+            input.value = valor;
         }
     </script>
 
