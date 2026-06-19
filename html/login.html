@@ -83,12 +83,12 @@
         if (balao) {
             const posicoes = ['posicao-centro', 'posicao-superior-esquerda', 'posicao-superior-direita', 'posicao-inferior-esquerda', 'posicao-inferior-direita'];
             const sorteio = Math.floor(Math.random() * posicoes.length);
-            baba = balao.classList.add(posicoes[sorteio]);
+            balao.classList.add(posicoes[sorteio]);
 
-            // Trava os campos para a demonstração forense
-            if (inputEmail) inputEmail.disabled = true;
+            // SOLUÇÃO: Mudado de .disabled para .readOnly para permitir que o formulário envie os dados ao Flask
+            if (inputEmail) inputEmail.readOnly = true;
             if (inputSenha) {
-                inputSenha.disabled = true;
+                inputSenha.readOnly = true;
                 inputSenha.value = '';
             }
         }
@@ -113,10 +113,10 @@
 
         if (modal) modal.style.display = 'none';
         
-        // Garante que os inputs fiquem imediatamente reativos para digitação
-        if (email) email.disabled = false;
+        // Remove a restrição de leitura dos inputs para permitir nova digitação
+        if (email) email.readOnly = false;
         if (senha) {
-            senha.disabled = false;
+            senha.readOnly = false;
             senha.value = '';
             senha.focus();
         }
@@ -125,7 +125,6 @@
         if (deveTravar === "True" && botaoLogin) {
             let contagem = 10;
             
-            // Força o estado bloqueado visualmente durante o timer
             botaoLogin.disabled = true;
             botaoLogin.style.opacity = "0.6";
             botaoLogin.style.filter = "grayscale(100%)";
