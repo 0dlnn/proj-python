@@ -289,16 +289,15 @@ def finalizar_desbloqueio():
         maior_id_atual = resultado['maior_id'] if resultado['maior_id'] is not None else 0
         proximo_id = maior_id_atual + 1  # Somamos 1 no Python mesmo!
         
-        # === ETAPA 2: ATUALIZA O STATUS DO USUÁRIO ===
+       # === ETAPA 2: ATUALIZA O STATUS DO USUÁRIO ===
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
         cursor.execute("""
             UPDATE usuario 
             SET id_status = 1, 
                 tentativas = 0, 
-                ultimo_ip_bloqueio = NULL,
                 responsavel_desbloqueio = %s 
             WHERE num_usuario = %s
-        """, (sigla_responsavel, id_usuario))
+        """, (sigla_responsavel, id_usuario)) # Tiramos o 'ultimo_ip_bloqueio = NULL' daqui!
         
         # === ETAPA 3: INSERE NO DESBLOQUEIO USANDO O ID QUE CALCULAMOS ===
         cursor.execute("""
