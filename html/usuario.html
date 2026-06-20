@@ -60,16 +60,16 @@
                             </span>
                         </td>
                         <td>
-                            <div class="caixa-status">
-                                {% if u.id_status == 2 %}
-                                    <span class="ponto-status ponto-bloqueado"></span>
-                                    <span class="texto-status texto-bloqueado">
-                                        {{ u.ultimo_ip_bloqueio if u.ultimo_ip_bloqueio else 'IP DESCONHECIDO' }}
-                                    </span>
-                                {% else %}
+                             <div class="caixa-status">
+                                    {% if u.id_status == 1 %}
                                     <span class="ponto-status ponto-ativo"></span>
                                     <span class="texto-status">
                                         {{ u.ip_origem if u.ip_origem else 'ATIVO' }}
+                                    </span>
+                                {% else %}
+                                    <span class="ponto-status ponto-bloqueado"></span>
+                                    <span class="texto-status texto-bloqueado">
+                                        {{ u.ultimo_ip_bloqueio if u.ultimo_ip_bloqueio else 'IP DESCONHECIDO' }}
                                     </span>
                                 {% endif %}
                             </div>
