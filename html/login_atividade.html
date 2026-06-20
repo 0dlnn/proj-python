@@ -3,21 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log de Atividades</title>
+    <title>Nexus Core - Log de Atividades</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='login_atividade.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-    <div class="container-painel">
-        <div class="menu-superior">
-            <a href="/admin/desbloqueio" class="aba">🔒 DESBLOQUEIO</a>
-            <a href="/admin/log_atividade" class="aba active">📋 LOG DE ATIVIDADES</a>
-            <a href="/admin/usuarios" class="aba">👥 USUÁRIOS</a>
-            <a href="/logout" class="aba sair">➔ SAIR</a>
-        </div>
+    <div class="cartao-glass">
+        
+        <nav class="menu-navegacao">
+            <a href="{{ url_for('admin_desbloqueio') }}">
+                <i class="fa-solid fa-unlock-keyhole"></i> DESBLOQUEIO
+            </a>
+            <a href="#" class="active">
+                <i class="fa-solid fa-clipboard-list"></i> LOG DE ATIVIDADES
+            </a>
+            <a href="{{ url_for('admin_usuarios') }}">
+                <i class="fa-solid fa-users-gear"></i> USUÁRIOS
+            </a>
+            <a href="{{ url_for('logout') }}" class="sair">
+                <i class="fa-solid fa-power-off"></i> SAIR
+            </a>
+        </nav>
 
-        <div class="cabecalho-central">
-            <h2>AUDITORIA DE LOGS DO SISTEMA</h2>
+        <div class="secao-cabecalho">
+            <h2>Auditoria de Logs do Sistema</h2>
             <p>Monitoramento forense de tráfego, falhas de autenticação e ações administrativas.</p>
         </div>
 
@@ -43,7 +53,7 @@
                                 {% elif "DESBLOQUEIO" in log.descricao %}
                                     <span class="badge tag-desbloqueio">DESBLOQUEIO</span>
                                 {% elif "TENTATIVA DE LOGIN" in log.descricao %}
-                                    <span class="badge tag-tentativa">TENTATIVA DE LOGIN</span>
+                                    <span class="badge tag-tentativa">TENTATIVA LOG</span>
                                 {% elif "ACESSO NEGADO" in log.descricao %}
                                     <span class="badge tag-negado">ACESSO NEGADO</span>
                                 {% else %}
@@ -72,8 +82,8 @@
             </table>
         </div>
 
-        <div class="rodape-admin">
-            <span>MODO ADMINISTRADOR</span>
+        <div class="rodape-status">
+            <p>MODO ADMINISTRADOR</p>
         </div>
     </div>
 

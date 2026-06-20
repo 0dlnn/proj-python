@@ -1,167 +1,101 @@
 /* ============================================================
-   RESET E FUNDO (NEXUS CORE DESIGN - IDENTICO AO RESTO DO SITE)
+   ESTRUTURA BASE (NEXUS CORE DESIGN - 100% IDENTICO)
    ============================================================ */
-* {
-    margin: 0; padding: 0; box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+* { 
+    margin: 0; padding: 0; box-sizing: border-box; 
+    font-family: 'Segoe UI', sans-serif; 
 }
 
 body {
-    min-height: 100vh;
-    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; display: flex; justify-content: center; align-items: center;
     background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
     padding: 20px;
 }
 
-/* ============================================================
-   CARD PRINCIPAL GLASSMORPHISM
-   ============================================================ */
+/* CARTÃO GLASS ADAPTADO PARA LARGURA DE TABELA (IGUAL AO CONTROLE DE USUÁRIOS) */
 .cartao-glass {
-    width: 100%;
-    max-width: 1000px; /* Expandido apenas para caber a tabela sem quebrar o design */
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px);
-    border-radius: 45px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-    text-align: center;
+    width: 100%; max-width: 950px; padding: 40px;
+    background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(25px);
+    border-radius: 45px; border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;
 }
 
-/* ============================================================
-   NAVEGAÇÃO (MENU SUPERIOR COM ÍCONES)
-   ============================================================ */
-.menu-navegacao {
-    display: flex; justify-content: space-around; align-items: center;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 12px; border-radius: 20px; margin-bottom: 30px;
-    gap: 10px;
+/* Navegação por Abas com Linha de Destaque */
+.menu-navegacao { 
+    display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); 
+    padding: 12px; border-radius: 20px; margin-bottom: 25px; 
 }
 
-.menu-navegacao a {
-    color: rgba(255, 255, 255, 0.6) !important;
-    text-decoration: none; font-size: 11px; font-weight: bold;
+.menu-navegacao a { 
+    color: #ffffff !important; text-decoration: none; font-size: 11px; 
+    font-weight: bold; opacity: 0.6; transition: 0.3s; 
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 16px; border-radius: 12px;
-    transition: all 0.3s ease;
 }
 
-.menu-navegacao a i {
-    color: rgba(255, 255, 255, 0.6) !important;
+.menu-navegacao a:hover { opacity: 0.9; }
+
+.menu-navegacao a.active { 
+    opacity: 1; border-bottom: 2px solid #ffffff; 
 }
 
-.menu-navegacao a:hover, .menu-navegacao a.active {
-    color: #ffffff !important;
-    background: rgba(255, 255, 255, 0.1);
-}
+.menu-navegacao a.sair { color: #e57373 !important; }
 
-.menu-navegacao a.active i, .menu-navegacao a:hover i {
-    color: #ffffff !important;
-}
-
-.menu-navegacao a.sair {
-    color: #e57373 !important;
-}
-.menu-navegacao a.sair i {
-    color: #e57373 !important;
-}
-.menu-navegacao a.sair:hover {
-    background: rgba(229, 115, 115, 0.1);
-}
+/* Cabeçalho Textos */
+h2 { color: #ffffff; font-size: 22px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+p { color: rgba(255, 255, 255, 0.7); font-size: 11px; margin-bottom: 30px; }
 
 /* ============================================================
-   CABEÇALHO
+   ESTRUTURA DA TABELA DE AUDITORIA FORENSE
    ============================================================ */
-.secao-cabecalho {
-    margin-bottom: 30px;
-}
-
-.secao-cabecalho h2 {
-    color: #ffffff !important;
-    font-size: 26px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
-}
-
-.secao-cabecalho p {
-    color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 13px;
-}
-
-/* ============================================================
-   ESTRUTURA FORENSE DA TABELA
-   ============================================================ */
-.container-tabela {
-    width: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 20px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.container-tabela { 
+    width: 100%; background: rgba(0, 0, 0, 0.2); border-radius: 20px;
+    overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05);
     margin-bottom: 25px;
 }
 
-.tabela-logs {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
+table {
+    width: 100%; border-collapse: collapse; text-align: left;
 }
 
-.tabela-logs th {
-    background: rgba(0, 0, 0, 0.4);
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-    padding: 16px 20px;
-    letter-spacing: 0.5px;
+th {
+    background: rgba(0, 0, 0, 0.4); color: #ffffff;
+    font-size: 12px; font-weight: bold; text-transform: uppercase;
+    padding: 16px 20px; letter-spacing: 1px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.tabela-logs td {
-    padding: 14px 20px;
-    color: #ffffff;
-    font-size: 13px;
+td {
+    padding: 14px 20px; color: #ffffff; font-size: 13px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
 }
 
-.tabela-logs tr:last-child td {
-    border-bottom: none;
-}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
-.tabela-logs tr:hover td {
-    background: rgba(255, 255, 255, 0.03);
-}
-
-/* TEXTOS ESPECÍFICOS */
+/* Customização de Células */
 .col-id { font-weight: bold; color: #ffcc00 !important; }
-.col-descricao { font-weight: 500; }
-.col-tentativa { font-weight: bold; text-align: center; }
+.col-descricao { color: rgba(255, 255, 255, 0.9); }
+.col-tentativa { text-align: center; font-weight: bold; }
 
 /* ============================================================
-   BADGES DE CYBERSECURITY STATUS
+   BADGES E SELOS DE STATUS (NEXUS STYLE)
    ============================================================ */
 .badge {
-    display: inline-block;
-    padding: 5px 12px;
-    border-radius: 30px;
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    text-align: center;
+    display: inline-block; padding: 5px 12px; border-radius: 20px;
+    font-size: 10px; font-weight: bold; text-align: center;
 }
 
-/* Categoria de Atividade */
-.tag-bloqueio { background: rgba(244, 67, 54, 0.25); color: #ff8a80; border: 1px solid rgba(244, 67, 54, 0.4); }
-.tag-desbloqueio { background: rgba(76, 175, 80, 0.25); color: #b9f6ca; border: 1px solid rgba(76, 175, 80, 0.4); }
-.tag-tentativa { background: rgba(255, 152, 0, 0.25); color: #ffd180; border: 1px solid rgba(255, 152, 0, 0.4); }
-.tag-negado { background: rgba(216, 27, 96, 0.3); color: #ff80ab; border: 1px solid rgba(216, 27, 96, 0.5); }
-.tag-sistema { background: rgba(255, 255, 255, 0.1); color: #cfd8dc; border: 1px solid rgba(255, 255, 255, 0.2); }
+/* Categorias de Log */
+.tag-bloqueio { background: rgba(244, 67, 54, 0.2); color: #ff8a80; border: 1px solid rgba(244, 67, 54, 0.3); }
+.tag-desbloqueio { background: rgba(76, 175, 80, 0.2); color: #b9f6ca; border: 1px solid rgba(76, 175, 80, 0.3); }
+.tag-tentativa { background: rgba(255, 152, 0, 0.2); color: #ffd180; border: 1px solid rgba(255, 152, 0, 0.3); }
+.tag-negado { background: rgba(216, 27, 96, 0.25); color: #ff80ab; border: 1px solid rgba(216, 27, 96, 0.4); }
+.tag-sistema { background: rgba(255, 255, 255, 0.08); color: #cfd8dc; border: 1px solid rgba(255, 255, 255, 0.15); }
 
-/* Status da Ação */
-.status-sucesso { background: rgba(76, 175, 80, 0.2); color: #81c784; border: 1px solid rgba(76, 175, 80, 0.4); }
-.status-falha { background: rgba(244, 67, 54, 0.2); color: #e57373; border: 1px solid rgba(244, 67, 54, 0.4); }
+/* Status Sucesso/Alerta */
+.status-sucesso { background: rgba(76, 175, 80, 0.15); color: #81c784; border: 1px solid rgba(76, 175, 80, 0.3); }
+.status-falha { background: rgba(244, 67, 54, 0.15); color: #e57373; border: 1px solid rgba(244, 67, 54, 0.3); }
 
 .sem-dados { text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic; padding: 30px !important; }
-.rodape-status { color: rgba(255, 255, 255, 0.4); font-size: 11px; font-weight: bold; letter-spacing: 2px; }
+.rodape-status { margin-top: 30px; font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
