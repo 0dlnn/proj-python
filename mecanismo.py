@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 import mysql.connector
 from datetime import datetime
 import bcrypt  # <--- Biblioteca responsável por gerar hashes seguros de senha
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__, template_folder='html', static_folder='css')
 app.secret_key = 'chave_secreta_para_seguranca'
@@ -108,7 +109,9 @@ def login():
                         
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
-                        return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
+                        
+                        # CORREÇÃO: Passando 'tentativas=novas_tentativas' de volta pro HTML
+                        return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
                         # === REGISTRO FORENSE: TENTATIVA INCORRETA ===
                         descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
@@ -119,11 +122,12 @@ def login():
                         
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
-                        return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
+                        
+                        # CORREÇÃO: Passando 'tentativas=novas_tentativas' de volta pro HTML
+                        return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
             else:
-                # Descobre o próximo ID para o log_atividade
                 conn = get_db_connection()
                 cursor = conn.cursor(dictionary=True)
                 cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
@@ -360,7 +364,7 @@ def finalizar_desbloqueio():
         
         # === ETAPA 4: LOG DE ATIVIDADES ===
         try:
-            agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            agora = datetime.now(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
             descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora}."
             cursor.execute("""
                 INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
