@@ -53,7 +53,7 @@
             {% if bloqueado %}
                 <i class="fa-solid fa-user-lock" style="color: #ff3e3e;"></i>
                 <h3>Acesso Bloqueado</h3>
-                <p>Esta conta foi suspensa por excesso de tentativas ({{ tentativas if tentativas else '5' }}/5). <br><strong>Entre em contato com o suporte técnico.</strong></p>
+                <p>Esta conta foi suspensa por excesso de tentativas. <br><strong>Entre em contato com o suporte técnico.</strong></p>
             
             {% elif conta_inexistente %}
                 <i class="fa-solid fa-user-xmark" style="color: #ff9f43;"></i>

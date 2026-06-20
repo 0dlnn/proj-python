@@ -63,7 +63,6 @@ def login():
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                     proximo_log = maior_log_atual + 1
                     
-                    # Forçando fuso horário de São Paulo
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                     descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
                     
@@ -93,13 +92,10 @@ def login():
                     else:
                         ip_atual = request.remote_addr
                     
-                    # Descobre o próximo ID para o log_atividade
                     cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                     resultado_log = cursor.fetchone()
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                     proximo_log = maior_log_atual + 1
-                    
-                    # Forçando fuso horário de São Paulo
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
                     if novas_tentativas >= 5:
@@ -128,18 +124,15 @@ def login():
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
+            # === ESSE É O BLOCO DO AJUSTE QUE VOCÊ VAI SUBSTITUIR NO FINAL DA ROTA ===
             else:
-                conn = get_db_connection()
-                cursor = conn.cursor(dictionary=True)
                 cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                 resultado_log = cursor.fetchone()
                 maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                 proximo_log = maior_log_atual + 1
                 
-                # Forçando fuso horário de São Paulo
                 agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 
-                # === REGISTRO FORENSE: ACESSO NEGADO ===
                 descricao = f"ACESSO_NEGADO: Tentativa com conta inexistente utilizando o e-mail: {email} em {agora}."
                 cursor.execute("""
                     INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
