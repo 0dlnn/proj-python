@@ -99,19 +99,19 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # 🚨 SUB-BLOCO A: ATUALIZA O USUÁRIO PRIMEIRO (Garante contagem e bloqueio)
+                    # 🚨 PASSO A: ATUALIZA O USUÁRIO DE FORMA ISOLADA (Garante o bloqueio no banco)
                     try:
                         if novas_tentativas >= 5:
                             cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         else:
                             cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
-                        conn.commit()  # Salva o estado do usuário imediatamente de forma isolada!
+                        conn.commit()  # Salva o número de tentativas imediatamente!
                     except Exception as u_e:
-                        print(f"[ERRO AO SALVAR ESTADO DO USUÁRIO]: {u_e}")
+                        print(f"[ERRO AO ATUALIZAR USUÁRIO]: {u_e}")
                         try: conn.rollback()
                         except: pass
 
-                    # 🚨 SUB-BLOCO B: REGISTRO DO LOG FORENSE
+                    # 🚨 PASSO B: REGISTRO DO LOG FORENSE (Usando id_status = 1 que o banco aceita!)
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
@@ -120,19 +120,21 @@ def login():
 
                         if novas_tentativas >= 5:
                             descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
+                            # Forçado id_status = 1 para herdar as permissões aceitas da tabela pai
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (%s, %s, 2, 2, %s)
+                                VALUES (%s, %s, 1, 2, %s)
                             """, (proximo_log, descricao, novas_tentativas))
                         else:
                             descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
+                            # Forçado id_status = 1 para herdar as permissões aceitas da tabela pai
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (%s, %s, 2, 4, %s)
+                                VALUES (%s, %s, 1, 4, %s)
                             """, (proximo_log, descricao, novas_tentativas))
                         conn.commit()
                     except Exception as log_e:
-                        print(f"[ERRO CRÍTICO NO LOG DE FALHA]: {log_e}")
+                        print(f"[ERRO AO GRAVAR LOG DE FALHA]: {log_e}")
                         try: conn.rollback()
                         except: pass
                         
@@ -154,9 +156,10 @@ def login():
                     
                     descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
                     
+                    # Forçado id_status = 1 e passado o parâmetro faltante na tupla
                     cursor.execute("""
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                        VALUES (%s, %s, 2, 5, NULL)
+                        VALUES (%s, %s, 1, 5, NULL)
                     """, (proximo_log, descricao))
                     conn.commit()
                 except Exception as log_e:
