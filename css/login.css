@@ -81,6 +81,8 @@ p { font-size: 13px; color: #ffffff; margin-bottom: 30px; opacity: 0.9; }
 
 /* Fundo escuro que trava a tela */
 /* Traduzido: .modal-overlay -> .fundo-modal */
+/* Fundo escuro que trava a tela */
+/* Traduzido: .modal-overlay -> .fundo-modal */
 .fundo-modal {
     position: fixed;
     top: 0; left: 0;
@@ -88,6 +90,11 @@ p { font-size: 13px; color: #ffffff; margin-bottom: 30px; opacity: 0.9; }
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(8px);
     z-index: 1000;
+    
+    /* ADICIONE ESSAS TRÊS LINHAS ABAIXO */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* O Balão (Estilo Base) */
