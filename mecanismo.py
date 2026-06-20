@@ -56,8 +56,23 @@ def login():
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
+                    # === REGISTRO FORENSE: LOGIN COM SUCESSO ===
+                    cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+                    resultado_log = cursor.fetchone()
+                    maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+                    proximo_log = maior_log_atual + 1
+                    
+                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
+                    
+                    cursor.execute("""
+                        INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                        VALUES (%s, %s, 1, 1, NULL)
+                    """, (proximo_log, descricao))
+                    
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
+                    
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
@@ -76,19 +91,55 @@ def login():
                     else:
                         ip_atual = request.remote_addr
                     
+                    # Descobre o próximo ID para o log_atividade
+                    cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+                    resultado_log = cursor.fetchone()
+                    maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+                    proximo_log = maior_log_atual + 1
+                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
                     if novas_tentativas >= 5:
+                        # === REGISTRO FORENSE: BLOQUEIO POR EXCESSO ===
+                        descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
+                        cursor.execute("""
+                            INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                            VALUES (%s, %s, 2, 2, %s)
+                        """, (proximo_log, descricao, novas_tentativas))
+                        
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
                         return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
                     else:
+                        # === REGISTRO FORENSE: TENTATIVA INCORRETA ===
+                        descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
+                        cursor.execute("""
+                            INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                            VALUES (%s, %s, 2, 4, %s)
+                        """, (proximo_log, descricao, novas_tentativas))
+                        
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
-                        # MODIFICAÇÃO: Retorna especificamente 'senha_incorreta=True'
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
             else:
-                # MODIFICAÇÃO: Retorna especificamente 'conta_inexistente=True'
+                # Descobre o próximo ID para o log_atividade
+                conn = get_db_connection()
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+                resultado_log = cursor.fetchone()
+                maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+                proximo_log = maior_log_atual + 1
+                agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                
+                # === REGISTRO FORENSE: ACESSO NEGADO ===
+                descricao = f"ACESSO_NEGADO: Tentativa com conta inexistente utilizando o e-mail: {email} em {agora}."
+                cursor.execute("""
+                    INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                    VALUES (%s, %s, 2, 5, NULL)
+                """, (proximo_log, descricao))
+                conn.commit()
+                
                 return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
 
     except Exception as e:
