@@ -266,36 +266,58 @@ def admin_desbloqueio():
 
 @app.route('/admin/log_atividade')
 def admin_log_activity():
+    # === BARREIRA DE PROTEÇÃO: SE NÃO FOR ADMIN, REGISTRA INVASÃO ===
     if 'user_id' not in session or session.get('perfil') != 1:
+        conn_negado = None
+        cursor_negado = None
         try:
             agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
             quem_tentou = f"Usuario ID #{session['user_id']}" if 'user_id' in session else "Acesso Anonimo"
             
-            conn = get_db_connection()
-            cursor = conn.cursor()
+            conn_negado = get_db_connection()
+            cursor_negado = conn_negado.cursor()
             sql_negado = "INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa) VALUES (%s, 2, 2, NULL)"
             msg_negado = f"ACESSO NEGADO: {quem_tentou} tentou forcar entrada na rota /admin/log_atividade em {agora}"
-            cursor.execute(sql_negado, (msg_negado,))
-            conn.commit()
-            cursor.close()
-            conn.close()
-        except: pass
+            cursor_negado.execute(sql_negado, (msg_negado,))
+            conn_negado.commit()
+        except Exception as e_log:
+            print(f"[AVISO BANCO] Falha ao registrar auditoria de barreira: {e_log}")
+        finally:
+            if cursor_negado:
+                try: cursor_negado.close()
+                except: pass
+            if conn_negado:
+                try: conn_negado.close()
+                except: pass
         return redirect(url_for('login'))
         
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    cursor.execute("""
-        SELECT num_log, descricao, id_status, id_tipo, num_tentativa 
-        FROM log_atividade 
-        ORDER BY num_log DESC
-    """)
-    logs_banco = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
-    return render_template('log_atividade.html', lista_logs=logs_banco)
-
+    # === FLUXO NORMAL: SE FOR ADMIN, LISTA OS LOGS COM SEGURANÇA ===
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT num_log, descricao, id_status, id_tipo, num_tentativa 
+            FROM log_atividade 
+            ORDER BY num_log DESC
+        """)
+        logs_banco = cursor.fetchall()
+        return render_template('log_atividade.html', lista_logs=logs_banco)
+        
+    except Exception as e_db:
+        print(f"[CRASH LOG ATIVIDADE] Erro ao buscar registros: {e_db}")
+        return render_template('login.html', db_error=True)
+        
+    finally:
+        # Garante o fechamento do pool de leitura em qualquer cenário de erro/sucesso
+        if cursor:
+            try: cursor.close()
+            except: pass
+        if conn:
+            try: conn.close()
+            except: pass
 @app.route('/admin/usuarios')
 def admin_usuarios():
     if 'user_id' not in session or session.get('perfil') != 1:
