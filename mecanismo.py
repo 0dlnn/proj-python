@@ -40,45 +40,15 @@ def login():
         if request.method == 'POST':
             email = request.form.get('email')
             senha = request.form.get('senha')
-            
-            # === CAPTURA DE TELEMETRIA AVANÇADA (AGENT USUÁRIO E REDE) ===
-            # Captura o IP real tratando o proxy reverso do Render
-            if request.headers.getlist("X-Forwarded-For"):
-                ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
-            else:
-                ip_atual = request.remote_addr
-
-            # Captura a string bruta do Agente de Usuário (Navegador, SO, Aparelho)
-            # Exemplo de persistência: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36... Chrome/120.0..."
-            agente_usuario = request.headers.get('User-Agent', 'Desconhecido')
-
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             
-            # Consulta a existência do usuário na base
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
-            # Definição de variáveis para o log de tentativa de login
-            id_usuario_log = user['num_usuario'] if user else None
-            # Se o usuário existe, a tentativa atual é o número que já está no banco + 1, se não existir, define como 1
-            numero_tentativa_log = (user['tentativas'] + 1) if user else 1
-
-           # === PERSISTÊNCIA RIGOROSA NA TABELA 'LOGIN' (ALINHADO COM O WORKBENCH) ===
-            # Mapeia exatamente as colunas do print: num_tentativa, ip_origem, agente_usuario, num_usuario, data
-            sql_log_login = """
-                INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data) 
-                VALUES (%s, %s, %s, %s, CURDATE())
-            """
-            # Certifique-se de enviar as variáveis na mesma ordem das colunas especificadas acima
-            cursor.execute(sql_log_login, (numero_tentativa_log, ip_atual, agente_usuario, id_usuario_log))
-            conn.commit()
-
             # 1️⃣ CENÁRIO: O usuário existe no banco de dados
             if user:
                 if user.get('id_status') == 2:
-                    cursor.close()
-                    conn.close()
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
                 # Comparação da senha criptografada via Bcrypt
@@ -86,16 +56,11 @@ def login():
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
-                    # Sucesso: Zera o contador de falhas na tabela usuario
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
-                    
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
-                    
-                    cursor.close()
-                    conn.close()
                     
                     if session['perfil'] == 1:
                         return redirect(url_for('admin_desbloqueio'))
@@ -106,44 +71,28 @@ def login():
                 else:
                     novas_tentativas = user['tentativas'] + 1
                     
-                    if novas_tentativas >= 5:
-                        # Bloqueia o usuário na tabela pai
-                        cursor.execute("""
-                            UPDATE usuario 
-                            SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s 
-                            WHERE email = %s
-                        """, (novas_tentativas, ip_atual, email))
-                        
-                        # === ALTERAÇÃO CONFORME WORKBENCH ===
-                        # Alimenta a tabela histórica de bloqueio mapeando rigorosamente suas colunas físicas
-                        sql_historico_bloqueio = """
-                            INSERT INTO bloqueio (data, num_tentativa, motivo) 
-                            VALUES (CURDATE(), %s, %s)
-                        """
-                        motivo_bloqueio = "Excesso de tentativas de login (Brute-Force)"
-                        cursor.execute(sql_historico_bloqueio, (novas_tentativas, motivo_bloqueio))
-                        
-                        conn.commit()
-                        cursor.close()
-                        conn.close()
-                        return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
-                    
+                    if request.headers.getlist("X-Forwarded-For"):
+                        ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
                     else:
-                        # Apenas updates o contador de tentativas do usuário
+                        ip_atual = request.remote_addr
+                    
+                    if novas_tentativas >= 5:
+                        cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
+                        conn.commit()
+                        return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
+                    else:
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
-                        cursor.close()
-                        conn.close()
+                        # MODIFICAÇÃO: Retorna especificamente 'senha_incorreta=True'
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
             else:
-                cursor.close()
-                conn.close()
+                # MODIFICAÇÃO: Retorna especificamente 'conta_inexistente=True'
                 return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
 
     except Exception as e:
-        print(f"Erro no subsistema de login/telemetria: {e}")
+        print(f"Erro no login: {e}")
         return render_template('login.html', db_error=True)
         
     return render_template('login.html')
@@ -231,27 +180,6 @@ def admin_desbloqueio():
         return redirect(url_for('login'))
     return render_template('desbloqueio.html')
 
-@app.route('/admin/log_atividade')
-def admin_log_activity():
-    # BARREIRA DE PROTEÇÃO: Impede usuários comuns de acessarem os logs de auditoria
-    if 'user_id' not in session or session.get('perfil') != 1:
-        return redirect(url_for('login'))
-        
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # Busca os logs trazendo a descrição e amarrando com as tentativas de login para auditoria
-    cursor.execute("""
-        SELECT num_log, descricao, id_status, id_tipo, num_tentativa 
-        FROM log_activity 
-        ORDER BY num_log DESC
-    """)
-    logs_banco = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
-    return render_template('log_atividade.html', lista_logs=logs_banco)
-
 @app.route('/admin/usuarios')
 def admin_usuarios():
     # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
@@ -303,13 +231,10 @@ def buscar_ip_bloqueio():
         print(f"Erro ao buscar IP: {e}")
         return jsonify({'ip': 'ERRO NO SERVIDOR'})
 
-# =========================================================================
-# === SUBSISTEMA DE REVERSÃO DE FALHAS E ASSINATURA FORENSE DE HISTÓRICO ===
-# =========================================================================
 @app.route('/finalizar_desbloqueio', methods=['POST'])
 def finalizar_desbloqueio():
     # === VALIDAÇÃO DE AUTORIDADE EM BANCO ===
-    # Protege a execução de comandos DML (UPDATE/INSERT) para evitar injeções ou modificações arbitrárias.
+    # Protege a execução de comandos DML (UPDATE) para evitar injeções ou modificações arbitrárias.
     if 'user_id' not in session or session.get('perfil') != 1:
         return redirect(url_for('login'))
 
@@ -317,48 +242,20 @@ def finalizar_desbloqueio():
     sigla_responsavel = request.form.get('responsavel')
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True) # Alterado temporariamente para dict para buscar chaves amigáveis
+    cursor = conn.cursor()
     
-    try:
-        # === MODIFICAÇÃO DE AUDITORIA CONFORME WORKBENCH ===
-        # Como a tabela 'bloqueio' não possui o ID do usuário diretamente, buscamos o registro 
-        # mais recente inserido no histórico geral de travas para mapear o vínculo lógico.
-        cursor.execute("SELECT num_bloqueio FROM bloqueio ORDER BY data DESC, num_bloqueio DESC LIMIT 1")
-        registro_bloqueio = cursor.fetchone()
-        
-        # Se houver um bloqueio registrado na tabela, isolamos o ID. Se não, definimos como NULL (evita quebra de FK)
-        id_bloqueio_vinculado = registro_bloqueio['num_bloqueio'] if registro_bloqueio else None
-
-        # === COMPONENTE DML 1: RESET LÓGICO DE CONTA ===
-        # Grava o responsável pela auditoria (LS, AR, EM) e limpa as restrições lógicas da tabela 'usuario'
-        cursor.execute("""
-            UPDATE usuario 
-            SET id_status = 1, 
-                tentativas = 0, 
-                ultimo_ip_bloqueio = NULL,
-                responsavel_desbloqueio = %s 
-            WHERE num_usuario = %s
-        """, (sigla_responsavel, id_usuario))
-        
-        # === COMPONENTE DML 2: PERSISTÊNCIA REAL NA TABELA 'DESBLOQUEIO' ===
-        # Alinha o fluxo de backend com o modelo relacional estrito.
-        # Insere um novo registro histórico documentando a ação da console administrativa.
-        sql_historico = """
-            INSERT INTO desbloqueio (data, usuario_responsavel, num_bloqueio) 
-            VALUES (CURDATE(), %s, %s)
-        """
-        cursor.execute(sql_historico, (sigla_responsavel, id_bloqueio_vinculado))
-        
-        conn.commit()
-        print(f"[AUDITORIA LOG] Usuário #{id_usuario} reativado com sucesso por {sigla_responsavel}. Histórico gravado.")
-
-    except Exception as e:
-        conn.rollback() # Aborta qualquer operação pendente caso ocorra falha de integridade referencial
-        print(f"[ERRO CRÍTICO CRASH] Falha ao sincronizar tabelas de desbloqueio: {e}")
-        
-    finally:
-        cursor.close()
-        conn.close() 
+    # RESET LÓGICO COMPLETO: Grava o responsável pela auditoria (LS, AR, EM) e limpa as restrições lógicas
+    cursor.execute("""
+        UPDATE usuario 
+        SET id_status = 1, 
+            tentativas = 0, 
+            ultimo_ip_bloqueio = NULL,
+            responsavel_desbloqueio = %s 
+        WHERE num_usuario = %s
+    """, (sigla_responsavel, id_usuario))
+    
+    conn.commit()
+    conn.close() 
     
     return redirect(url_for('admin_usuarios'))
 
