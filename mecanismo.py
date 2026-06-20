@@ -36,7 +36,6 @@ def home():
 # === SUBSISTEMA DE AUTENTICAÇÃO E ANÁLISE DE BRUTE-FORCE ===
 # =========================================================================
 @app.route('/login', methods=['GET', 'POST'])
-@app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
         if request.method == 'POST':
@@ -58,10 +57,11 @@ def login():
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
+                    # Zera as tentativas no banco primeiro para garantir o acesso
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
 
-                    # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO ===
+                    # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO (id_status=1, id_tipo=1) ===
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
@@ -99,7 +99,7 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # 🚨 ATUALIZA O USUÁRIO PRIMEIRO
+                    # 🚨 PASSO A: ATUALIZA O ESTADO DO USUÁRIO PRIMEIRO (Evita travar o bloqueio)
                     try:
                         if novas_tentativas >= 5:
                             cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
@@ -111,7 +111,7 @@ def login():
                         try: conn.rollback()
                         except: pass
 
-                    # 🚨 REGISTRO DO LOG FORENSE (Forçado id_status=1 e id_tipo=1)
+                    # 🚨 PASSO B: REGISTRO DO LOG FORENSE
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
@@ -120,15 +120,17 @@ def login():
 
                         if novas_tentativas >= 5:
                             descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
+                            # id_status = 1 (Log gravado com sucesso), id_tipo = 2 (Gabarito de Bloqueio)
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (%s, %s, 1, 1, %s)
+                                VALUES (%s, %s, 1, 2, %s)
                             """, (proximo_log, descricao, novas_tentativas))
                         else:
                             descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
+                            # id_status = 1 (Log gravado com sucesso), id_tipo = 4 (Gabarito de Tentativa)
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (%s, %s, 1, 1, %s)
+                                VALUES (%s, %s, 1, 4, %s)
                             """, (proximo_log, descricao, novas_tentativas))
                         conn.commit()
                     except Exception as log_e:
@@ -154,10 +156,10 @@ def login():
                     
                     descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
                     
-                    # Forçado id_status=1 e id_tipo=1
+                    # 🚨 CORRIGIDO: Passando todos os parâmetros necessários para alinhar com os placeholders!
                     cursor.execute("""
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                        VALUES (%s, %s, 1, 1, NULL)
+                        VALUES (%s, %s, 1, 5, NULL)
                     """, (proximo_log, descricao))
                     conn.commit()
                 except Exception as log_e:
