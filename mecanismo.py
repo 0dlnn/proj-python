@@ -99,39 +99,43 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # Prioridade: Atualiza e commita as tentativas no banco imediatamente
-                    if novas_tentativas >= 5:
-                        cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
-                        conn.commit()
-                    else:
-                        cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
-                        conn.commit()
-
-                    # === REGISTRO FORENSE ISOLADO: TENTATIVAS (id_tipo = 4) E BLOQUEIOS (id_tipo = 2) ===
+                    # === PROCESSAMENTO UNIFICADO DE BANCO E LOG (Evita conflitos de Lock) ===
                     try:
+                        # 1. Prepara a query de alteração de dados do usuário
+                        if novas_tentativas >= 5:
+                            cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
+                        else:
+                            cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+
+                        # 2. Busca o ID do próximo log sequencial
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
                         maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                         proximo_log = int(maior_log_atual) + 1
 
+                        # 3. Prepara o INSERT do log forense correspondente
                         if novas_tentativas >= 5:
-                            # id_tipo = 2 corresponde a BLOQUEIO na sua tabela tipo
                             descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                                 VALUES (%s, %s, 1, 2, %s)
                             """, (proximo_log, descricao, novas_tentativas))
                         else:
-                            # id_tipo = 4 corresponde a TENTATIVA_LOGIN na sua tabela tipo
                             descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                                 VALUES (%s, %s, 1, 4, %s)
                             """, (proximo_log, descricao, novas_tentativas))
-                        conn.commit()
-                    except Exception as log_e:
-                        print(f"[ERRO LOG FALHA]: {log_e}")
                         
+                        # 4. SALVA TUDO EM UM ÚNICO BLOCO SEGURO
+                        conn.commit()
+
+                    except Exception as log_e:
+                        print(f"[ERRO CRÍTICO NO LOG DE FALHA]: {log_e}")
+                        try: conn.rollback()
+                        except: pass
+                        
+                    # Retorno das caixas para o HTML
                     if novas_tentativas >= 5:
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
@@ -148,10 +152,8 @@ def login():
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                     proximo_log = int(maior_log_atual) + 1
                     
-                    # Nova descrição personalizada conforme solicitado
                     descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
                     
-                    # id_tipo = 5 corresponds a ACESSO_NEGADO na sua tabela tipo
                     cursor.execute("""
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                         VALUES (%s, %s, 1, 5, NULL)
