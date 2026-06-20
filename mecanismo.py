@@ -197,6 +197,41 @@ def admin_usuarios():
 
     return render_template('usuario.html', lista=usuarios_banco)
 
+@app.route('/admin/log_atividade') # NOVA ROTA
+def admin_log_activity():
+    # === BARREIRA DE PRIVILÉGIO MÍNIMO (SÓ ENTRA SE FOR ADMIN) ===
+    if 'user_id' not in session or int(session.get('perfil', 0)) != 1:
+        return redirect(url_for('login'))
+        
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Busca os logs ordenando do mais recente para o mais antigo
+        cursor.execute("""
+            SELECT num_log, descricao, id_status, id_tipo, num_tentativa 
+            FROM log_atividade 
+            ORDER BY num_log DESC
+        """)
+        logs_banco = cursor.fetchall()
+        
+        # ⚠️ IMPORTANTE: 'lista_logs' é a variável que o seu HTML vai ler no Jinja2 {% for log in lista_logs %}
+        return render_template('login_atividade.html', lista_logs=logs_banco)
+        
+    except Exception as e:
+        print(f"\n[CRASH NA ROTA LOGS]: {e}\n")
+        return render_template('login.html', db_error=True)
+        
+    finally:
+        # Garante que a conexão remota fecha mesmo se o fetchall falhar
+        if cursor:
+            try: cursor.close()
+            except: pass
+        if conn:
+            try: conn.close()
+            except: pass
 # =========================================================================
 # === SISTEMA DE ENDPOINTS: CONSULTA DINÂMICA DE RASTREAMENTO ===
 # =========================================================================
