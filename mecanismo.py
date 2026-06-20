@@ -268,30 +268,62 @@ def buscar_ip_bloqueio():
 
 @app.route('/finalizar_desbloqueio', methods=['POST'])
 def finalizar_desbloqueio():
-    # === VALIDAÇÃO DE AUTORIDADE EM BANCO ===
-    # Protege a execução de comandos DML (UPDATE) para evitar injeções ou modificações arbitrárias.
-    if 'user_id' not in session or session.get('perfil') != 1:
+    # === BARREIRA DE PRIVILÉGIO MÍNIMO (SÓ ENTRA SE FOR ADMIN) ===
+    if 'user_id' not in session or int(session.get('perfil', 0)) != 1:
         return redirect(url_for('login'))
 
+    # Captura os dados vindos do formulário HTML (.html)
     id_usuario = request.form.get('id_usuario')
-    sigla_responsavel = request.form.get('responsavel')
+    sigla_responsavel = request.form.get('responsavel') # Captura a sigla digitada
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # RESET LÓGICO COMPLETO: Grava o responsável pela auditoria (LS, AR, EM) e limpa as restrições lógicas
-    cursor.execute("""
-        UPDATE usuario 
-        SET id_status = 1, 
-            tentativas = 0, 
-            ultimo_ip_bloqueio = NULL,
-            responsavel_desbloqueio = %s 
-        WHERE num_usuario = %s
-    """, (sigla_responsavel, id_usuario))
-    
-    conn.commit()
-    conn.close() 
-    
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 1. ATUALIZA A TABELA 'usuario' (Zera tentativas, ativa conta e salva o responsável)
+        cursor.execute("""
+            UPDATE usuario 
+            SET id_status = 1, 
+                tentativas = 0, 
+                ultimo_ip_bloqueio = NULL,
+                responsavel_desbloqueio = %s 
+            WHERE num_usuario = %s
+        """, (sigla_responsavel, id_usuario))
+        
+        # 2. ALIMENTA A TABELA 'log_atividade' (Gera o histórico para a tela de Logs)
+        try:
+            agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora}."
+            
+            # Conforme o seu banco: id_status=1 (Sucesso), id_tipo=2 (Desbloqueio administrativo)
+            cursor.execute("""
+                INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                VALUES (%s, 1, 2, NULL)
+            """, (descricao_log,))
+        except Exception as log_err:
+            # Se o log falhar por qualquer motivo de restrição, não trava o fluxo principal
+            print(f"[AVISO LOG_ATIVIDADE] Falha segura ao gerar histórico: {log_err}")
+
+        # Confirma as transações de escrita no banco de dados
+        conn.commit()
+        
+    except Exception as e:
+        if conn: 
+            conn.rollback()
+        print(f"\n[CRASH NO PROCESSO DE DESBLOQUEIO]: {e}\n")
+        
+    finally:
+        # Desconexão limpa obrigatória para evitar travamentos no Render
+        if cursor:
+            try: cursor.close()
+            except: pass
+        if conn:
+            try: conn.close()
+            except: pass
+            
+    # Redireciona de volta para a tabela de gerenciamento de usuários
     return redirect(url_for('admin_usuarios'))
 
 # === ROTA ADICIONAL: ENCERRAMENTO SEGURO DE PRIVILÉGIOS (TERMINAÇÃO DE CONEXÃO) ===
