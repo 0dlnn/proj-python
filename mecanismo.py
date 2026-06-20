@@ -272,9 +272,10 @@ def finalizar_desbloqueio():
     if 'user_id' not in session or int(session.get('perfil', 0)) != 1:
         return redirect(url_for('login'))
 
-    # Captura os dados vindos do formulário HTML (.html)
-    id_usuario = request.form.get('id_usuario')
-    sigla_responsavel = request.form.get('responsavel') # Captura a sigla digitada
+    # Captura os dados vindos do formulário HTML
+    id_usuario = request.form.get('id_usuario')       # ID do usuário bloqueado (ex: 1001)
+    sigla_responsavel = request.form.get('responsavel') # Sigla digitada (ex: LS)
+    id_admin_logado = session.get('user_id')           # ID do Admin logado (ex: 2)
 
     conn = None
     cursor = None
@@ -282,7 +283,7 @@ def finalizar_desbloqueio():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 1. ATUALIZA A TABELA 'usuario' (Zera tentativas, ativa conta e salva o responsável)
+        # 1. ATUALIZA A TABELA 'usuario'
         cursor.execute("""
             UPDATE usuario 
             SET id_status = 1, 
@@ -292,38 +293,44 @@ def finalizar_desbloqueio():
             WHERE num_usuario = %s
         """, (sigla_responsavel, id_usuario))
         
-        # 2. ALIMENTA A TABELA 'log_atividade' (Gera o histórico para a tela de Logs)
+        # 2. POPULA A TABELA 'desbloqueio' 
+        cursor.execute("""
+            INSERT INTO desbloqueio (data, usuario_responsavel, num_bloqueio) 
+            VALUES (CURDATE(), %s, %s)
+        """, (id_admin_logado, id_usuario))
+        
+        # 3. ALIMENTA A TABELA 'log_atividade' (Histórico Forense)
         try:
             agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
             descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora}."
-            
-            # Conforme o seu banco: id_status=1 (Sucesso), id_tipo=2 (Desbloqueio administrativo)
             cursor.execute("""
                 INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
                 VALUES (%s, 1, 2, NULL)
             """, (descricao_log,))
         except Exception as log_err:
-            # Se o log falhar por qualquer motivo de restrição, não trava o fluxo principal
             print(f"[AVISO LOG_ATIVIDADE] Falha segura ao gerar histórico: {log_err}")
 
-        # Confirma as transações de escrita no banco de dados
+        # Confirma todas as transações se nada falhar acima
         conn.commit()
         
     except Exception as e:
-        if conn: 
+        if conn:
             conn.rollback()
         print(f"\n[CRASH NO PROCESSO DE DESBLOQUEIO]: {e}\n")
         
     finally:
-        # Desconexão limpa obrigatória para evitar travamentos no Render
+        # Fechamento seguro e limpo dos cursores e conexões
         if cursor:
-            try: cursor.close()
-            except: pass
+            try:
+                cursor.close()
+            except:
+                pass
         if conn:
-            try: conn.close()
-            except: pass
+            try:
+                conn.close()
+            except:
+                pass
             
-    # Redireciona de volta para a tabela de gerenciamento de usuários
     return redirect(url_for('admin_usuarios'))
 
 # === ROTA ADICIONAL: ENCERRAMENTO SEGURO DE PRIVILÉGIOS (TERMINAÇÃO DE CONEXÃO) ===
