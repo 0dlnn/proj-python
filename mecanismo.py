@@ -27,145 +27,153 @@ def home():
 # =========================================================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    conn = None
+    cursor = None
     try:
         if request.method == 'POST':
             email = request.form.get('email')
             senha = request.form.get('senha')
             
             # === CAPTURA DE TELEMETRIA AVANÇADA (AGENT USUÁRIO E REDE) ===
-            # Captura o IP real tratando o proxy reverso do Render
             if request.headers.getlist("X-Forwarded-For"):
                 ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
             else:
                 ip_atual = request.remote_addr
 
-            # Captura a string bruta do Agente de Usuário (Navegador, SO, Aparelho)
             agente_usuario = request.headers.get('User-Agent', 'Desconhecido')
 
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             
-            # Consulta a existência do usuário na base
+            # 🔍 PASSO 1: Consulta PRIMEIRO a existência do usuário para evitar quebra de integridade (FK)
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
-            # Definição de variáveis para o log de tentativa de login
-            id_usuario_log = user['num_usuario'] if user else None
-            numero_tentativa_log = (user['tentativas'] + 1) if user else 1
+            # 1️⃣ CENÁRIO A: O e-mail digitado NÃO existe no banco de dados
+            if not user:
+                agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                sql_log_inexistente = """
+                    INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                    VALUES (%s, 2, 1, NULL)
+                """
+                msg_inexistente = f"TENTATIVA DE LOGIN: Usuario nao registrado tentou acesso com o e-mail: {email} em {agora}"
+                cursor.execute(sql_log_inexistente, (msg_inexistente,))
+                conn.commit()
+                return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
 
-            # === PERSISTÊNCIA RIGOROSA NA TABELA 'LOGIN' ===
-            sql_log_login = """
-                INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data) 
-                VALUES (%s, %s, %s, %s, CURDATE())
-            """
-            cursor.execute(sql_log_login, (numero_tentativa_log, ip_atual, agente_usuario, id_usuario_log))
-            conn.commit()
+            # Se o usuário existe, extraímos as variáveis de histórico de tentativas de forma segura
+            id_usuario_log = user['num_usuario']
+            numero_tentativa_log = user['tentativas'] + 1
 
-            # 1️⃣ CENÁRIO: O usuário existe no banco de dados
-            if user:
-                if user.get('id_status') == 2:
-                    cursor.close()
-                    conn.close()
-                    return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
+            # 🔍 PASSO 2: Persistência na tabela 'login' apenas para usuários válidos existentes
+            try:
+                sql_log_login = """
+                    INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data) 
+                    VALUES (%s, %s, %s, %s, CURDATE())
+                """
+                cursor.execute(sql_log_login, (numero_tentativa_log, ip_atual, agente_usuario, id_usuario_log))
+                conn.commit()
+            except mysql.connector.Error as err_log:
+                print(f"[AVISO DE BANCO] Falha não impeditiva ao gravar histórico de login: {err_log}")
 
-                # Comparação da senha criptografada via Bcrypt
-                senha_digitada_bytes = senha.encode('utf-8')
-                senha_banco_bytes = user['senha_hash'].encode('utf-8')
+            # 2️⃣ CENÁRIO B: O usuário existe mas já se encontra bloqueado pelo sistema
+            if user.get('id_status') == 2:
+                return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
-                if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
-                    # Sucesso: Zera o contador de falhas na tabela usuario
-                    cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
-                    
-                    # === AUDITORIA: PERSISTÊNCIA EM LOG DE ATIVIDADE (LOGIN COM SUCESSO E DATA/HORA) ===
-                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-                    sql_sucesso_log = """
-                        INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
-                        VALUES (%s, 1, 1, %s)
-                    """
-                    msg_sucesso = f"LOGIN: Acesso concedido e autenticado para o usuario {email} em {agora}."
-                    cursor.execute(sql_sucesso_log, (msg_sucesso, numero_tentativa_log))
-                    
-                    conn.commit()
-                    
-                    # CORREÇÃO: Aplicação segura de escopo de sessão (Não-Permanente ao fechar navegador)
-                    session.permanent = False
-                    session['user_id'] = user['num_usuario']
-                    session['user_nome'] = user['nome']
-                    session['perfil'] = user.get('perfil', 0)
-                    
-                    cursor.close()
-                    conn.close()
-                    
-                    if session['perfil'] == 1:
-                        return redirect(url_for('admin_desbloqueio'))
-                    else:
-                        return redirect('https://www.google.com')
+            # 🔍 PASSO 3: Validação criptográfica do hash de senha via Bcrypt
+            senha_digitada_bytes = senha.encode('utf-8')
+            senha_banco_bytes = user['senha_hash'].encode('utf-8')
+
+            if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
+                # SUCESSO: Reseta o contador de falhas acumuladas do usuário
+                cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                 
-                # 2️⃣ CENÁRIO: O e-mail existe, mas a senha está errada
+                # Gravando o log forense de atividade bem-sucedida (Usando NULL na FK para evitar crash de restrição)
+                agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                sql_sucesso_log = """
+                    INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                    VALUES (%s, 1, 1, NULL)
+                """
+                msg_sucesso = f"LOGIN: Acesso concedido e autenticado para o usuario {email} em {agora}."
+                cursor.execute(sql_sucesso_log, (msg_sucesso,))
+                conn.commit()
+                
+                # Alocação limpa de chaves de privilégio na Sessão do Flask
+                session.permanent = False
+                session['user_id'] = user['num_usuario']
+                session['user_nome'] = user['nome']
+                session['perfil'] = user.get('perfil', 0)
+                
+                # Fechamento manual imediato antes do redirecionamento de rota para liberar o pool
+                cursor.close()
+                conn.close()
+                
+                if session['perfil'] == 1:
+                    return redirect(url_for('admin_desbloqueio'))
                 else:
-                    novas_tentativas = user['tentativas'] + 1
+                    return redirect('https://www.google.com')
+            
+            # 3️⃣ CENÁRIO C: O e-mail existe, mas a senha está incorreta
+            else:
+                novas_tentativas = user['tentativas'] + 1
+                
+                if novas_tentativas >= 5:
+                    # Aplica bloqueio lógico imediato na tabela pai 'usuario'
+                    cursor.execute("""
+                        UPDATE usuario 
+                        SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s 
+                        WHERE email = %s
+                    """, (novas_tentativas, ip_atual, email))
                     
-                    if novas_tentativas >= 5:
-                        cursor.execute("""
-                            UPDATE usuario 
-                            SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s 
-                            WHERE email = %s
-                        """, (novas_tentativas, ip_atual, email))
-                        
+                    # Alimenta a tabela histórica de bloqueio
+                    try:
                         sql_historico_bloqueio = """
                             INSERT INTO bloqueio (data, num_tentativa, motivo) 
                             VALUES (CURDATE(), %s, %s)
                         """
                         motivo_bloqueio = "Excesso de tentativas de login (Brute-Force)"
                         cursor.execute(sql_historico_bloqueio, (novas_tentativas, motivo_bloqueio))
-                        
-                        agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-                        sql_log_bloqueio_atividade = """
-                            INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, 2, 1, %s)
-                        """
-                        msg_bloqueio_atividade = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}"
-                        cursor.execute(sql_log_bloqueio_atividade, (msg_bloqueio_atividade, novas_tentativas))
-                        
-                        conn.commit()
-                        cursor.close()
-                        conn.close()
-                        return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
+                    except Exception as e_blq:
+                        print(f"[AVISO DE BANCO] Falha ao persistir na tabela bloqueio: {e_blq}")
                     
-                    else:
-                        cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
-                        
-                        agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-                        sql_log_erro_atividade = """
-                            INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, 2, 1, %s)
-                        """
-                        msg_erro_atividade = f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}"
-                        cursor.execute(sql_log_erro_atividade, (msg_erro_atividade, novas_tentativas))
-                        
-                        conn.commit()
-                        cursor.close()
-                        conn.close()
-                        return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
-            
-            # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
-            else:
-                agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-                sql_log_inexistente = """
-                    INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
-                    VALUES (%s, 2, 1, %s)
-                """
-                msg_inexistente = f"TENTATIVA DE LOGIN: Usuario nao registrado tentou acesso com o e-mail: {email} em {agora}"
-                cursor.execute(sql_log_inexistente, (msg_inexistente, numero_tentativa_log))
+                    # Persiste a auditoria de incidente de segurança na tabela de atividades
+                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    sql_log_bloqueio_atividade = """
+                        INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                        VALUES (%s, 2, 1, NULL)
+                    """
+                    msg_bloqueio_atividade = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}"
+                    cursor.execute(sql_log_bloqueio_atividade, (msg_bloqueio_atividade,))
+                    conn.commit()
+                    return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
                 
-                conn.commit()
-                cursor.close()
-                conn.close()
-                return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
+                else:
+                    # Apenas incrementa uma falha no contador do usuário
+                    cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+                    
+                    # Adiciona log descritivo de falha intermediária
+                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    sql_log_erro_atividade = """
+                        INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
+                        VALUES (%s, 2, 1, NULL)
+                    """
+                    msg_erro_atividade = f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}"
+                    cursor.execute(sql_log_erro_atividade, (msg_erro_atividade,))
+                    conn.commit()
+                    return render_template('login.html', senha_incorreta=True, email_digitado=email, trava_demo=True)
 
     except Exception as e:
-        print(f"Erro no subsistema de login/telemetria: {e}")
+        print(f"\n[CRASH CRÍTICO NO BACKEND]: {e}\n")
         return render_template('login.html', db_error=True)
+        
+    finally:
+        # O bloco finally garante que, caso a requisição saia por qualquer return de erro ou aviso, as conexões fechem
+        if cursor:
+            try: cursor.close()
+            except: pass
+        if conn:
+            try: conn.close()
+            except: pass
         
     return render_template('login.html')
 
@@ -227,7 +235,10 @@ def cadastro():
 # =========================================================================
 @app.route('/admin/desbloqueio')
 def admin_desbloqueio():
+    # === BARREIRA DE PROTEÇÃO CONTRA ELEMENTOS EXTERNOS (TRAVA DE URL) ===
     if 'user_id' not in session or session.get('perfil') != 1: 
+        conn = None
+        cursor = None
         try:
             agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
             quem_tentou = f"Usuario ID #{session['user_id']}" if 'user_id' in session else "Acesso Anonimo"
@@ -238,10 +249,19 @@ def admin_desbloqueio():
             msg_negado = f"ACESSO NEGADO: {quem_tentou} tentou forcar entrada na rota /admin/desbloqueio em {agora}"
             cursor.execute(sql_negado, (msg_negado,))
             conn.commit()
-            cursor.close()
-            conn.close()
-        except: pass
+        except Exception as e_log:
+            # Imprime o erro no console para você saber o que houve sem travar o usuário
+            print(f"[AVISO BANCO] Erro ao registrar auditoria de invasao: {e_log}")
+        finally:
+            # O bloco finally executa SEMPRE, limpando os problemas do VS Code
+            if cursor:
+                try: cursor.close()
+                except: pass
+            if conn:
+                try: conn.close()
+                except: pass
         return redirect(url_for('login'))
+        
     return render_template('desbloqueio.html')
 
 @app.route('/admin/log_atividade')
