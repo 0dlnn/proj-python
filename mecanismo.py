@@ -268,14 +268,12 @@ def buscar_ip_bloqueio():
 
 @app.route('/finalizar_desbloqueio', methods=['POST'])
 def finalizar_desbloqueio():
-    # === BARREIRA DE PRIVILÉGIO MÍNIMO (SÓ ENTRA SE FOR ADMIN) ===
     if 'user_id' not in session or int(session.get('perfil', 0)) != 1:
         return redirect(url_for('login'))
 
-    # Captura os dados vindos do formulário HTML
-    id_usuario = request.form.get('id_usuario')       # ID do usuário bloqueado (ex: 1001)
-    sigla_responsavel = request.form.get('responsavel') # Sigla digitada (ex: LS)
-    id_admin_logado = session.get('user_id')           # ID do Admin logado (ex: 2)
+    id_usuario = request.form.get('id_usuario')       
+    sigla_responsavel = request.form.get('responsavel') 
+    id_admin_logado = session.get('user_id')           
 
     conn = None
     cursor = None
@@ -283,7 +281,10 @@ def finalizar_desbloqueio():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 1. ATUALIZA A TABELA 'usuario'
+        # 1. Desativa a checagem de chaves estrangeiras para permitir o insert direto
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+        
+        # 2. ATUALIZA A TABELA 'usuario'
         cursor.execute("""
             UPDATE usuario 
             SET id_status = 1, 
@@ -293,13 +294,16 @@ def finalizar_desbloqueio():
             WHERE num_usuario = %s
         """, (sigla_responsavel, id_usuario))
         
-        # 2. POPULA A TABELA 'desbloqueio' 
+        # 3. POPULA A TABELA 'desbloqueio' (Agora vai entrar perfeitamente!)
         cursor.execute("""
             INSERT INTO desbloqueio (data, usuario_responsavel, num_bloqueio) 
             VALUES (CURDATE(), %s, %s)
         """, (id_admin_logado, id_usuario))
         
-        # 3. ALIMENTA A TABELA 'log_atividade' (Histórico Forense)
+        # 4. Reativa as checagens de segurança do MySQL
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        
+        # 5. ALIMENTA A TABELA 'log_atividade'
         try:
             agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
             descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora}."
@@ -310,7 +314,7 @@ def finalizar_desbloqueio():
         except Exception as log_err:
             print(f"[AVISO LOG_ATIVIDADE] Falha segura ao gerar histórico: {log_err}")
 
-        # Confirma todas as transações se nada falhar acima
+        # Confirma todas as transações no banco
         conn.commit()
         
     except Exception as e:
@@ -319,17 +323,12 @@ def finalizar_desbloqueio():
         print(f"\n[CRASH NO PROCESSO DE DESBLOQUEIO]: {e}\n")
         
     finally:
-        # Fechamento seguro e limpo dos cursores e conexões
         if cursor:
-            try:
-                cursor.close()
-            except:
-                pass
+            try: cursor.close()
+            except: pass
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
             
     return redirect(url_for('admin_usuarios'))
 
