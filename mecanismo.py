@@ -63,7 +63,8 @@ def login():
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                     proximo_log = maior_log_atual + 1
                     
-                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    # Forçando fuso horário de São Paulo
+                    agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                     descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
                     
                     cursor.execute("""
@@ -97,7 +98,9 @@ def login():
                     resultado_log = cursor.fetchone()
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                     proximo_log = maior_log_atual + 1
-                    agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    
+                    # Forçando fuso horário de São Paulo
+                    agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
                     if novas_tentativas >= 5:
                         # === REGISTRO FORENSE: BLOQUEIO POR EXCESSO ===
@@ -110,7 +113,6 @@ def login():
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
                         
-                        # CORREÇÃO: Passando 'tentativas=novas_tentativas' de volta pro HTML
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
                         # === REGISTRO FORENSE: TENTATIVA INCORRETA ===
@@ -123,7 +125,6 @@ def login():
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
                         
-                        # CORREÇÃO: Passando 'tentativas=novas_tentativas' de volta pro HTML
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
@@ -134,7 +135,9 @@ def login():
                 resultado_log = cursor.fetchone()
                 maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                 proximo_log = maior_log_atual + 1
-                agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                
+                # Forçando fuso horário de São Paulo
+                agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 
                 # === REGISTRO FORENSE: ACESSO NEGADO ===
                 descricao = f"ACESSO_NEGADO: Tentativa com conta inexistente utilizando o e-mail: {email} em {agora}."
@@ -336,6 +339,10 @@ def finalizar_desbloqueio():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Usando dicionário para facilitar
         
+        # === TRAVA DE TIMEZONE: GERA A DATA EXATA EM STRING PARA O BANCO E PARA O TEXTO ===
+        agora_texto = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
+        agora_banco = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d %H:%M:%S')
+        
         # === ETAPA 1: DESCUBRA O MAIOR ID ATUAL (Select Simples) ===
         cursor.execute("SELECT MAX(num_desbloqueio) as maior_id FROM desbloqueio")
         resultado = cursor.fetchone()
@@ -344,7 +351,7 @@ def finalizar_desbloqueio():
         maior_id_atual = resultado['maior_id'] if resultado['maior_id'] is not None else 0
         proximo_id = maior_id_atual + 1  # Somamos 1 no Python mesmo!
         
-       # === ETAPA 2: ATUALIZA O STATUS DO USUÁRIO ===
+        # === ETAPA 2: ATUALIZA O STATUS DO USUÁRIO ===
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
         cursor.execute("""
             UPDATE usuario 
@@ -352,27 +359,31 @@ def finalizar_desbloqueio():
                 tentativas = 0, 
                 responsavel_desbloqueio = %s 
             WHERE num_usuario = %s
-        """, (sigla_responsavel, id_usuario)) # Tiramos o 'ultimo_ip_bloqueio = NULL' daqui!
+        """, (sigla_responsavel, id_usuario)) # Mantendo o IP intacto conforme o combinado!
         
-        # === ETAPA 3: INSERE NO DESBLOQUEIO USANDO O ID QUE CALCULAMOS ===
+        # === ETAPA 3: INSERE NO DESBLOQUEIO USANDO O ID E A DATA DE SÃO PAULO CALCULADOS ===
         cursor.execute("""
             INSERT INTO desbloqueio (num_desbloqueio, data, usuario_responsavel, num_bloqueio) 
-            VALUES (%s, CURDATE(), %s, %s)
-        """, (proximo_id, id_admin_logado, id_usuario))
+            VALUES (%s, %s, %s, %s)
+        """, (proximo_id, agora_banco, id_admin_logado, id_usuario)) # Trocado CURDATE() por agora_banco em string
         
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
-        
-        # === ETAPA 4: LOG DE ATIVIDADES ===
+        # === ETAPA 4: LOG DE ATIVIDADES (CALCULANDO O ID MANUAL PARA NÃO FALHAR) ===
         try:
-            agora = datetime.now(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
-            descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora}."
+            cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+            resultado_log = cursor.fetchone()
+            maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+            proximo_log = maior_log_atual + 1
+            
+            descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora_texto}."
+            
             cursor.execute("""
-                INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
-                VALUES (%s, 1, 2, NULL)
-            """, (descricao_log,))
-        except:
-            pass
+                INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                VALUES (%s, %s, 1, 3, NULL)
+            """, (proximo_log, descricao_log)) # Adicionado proximo_log e corrigido o id_tipo para 3 (DESBLOQUEIO)
+        except Exception as log_err:
+            print(f"[AVISO LOG_ATIVIDADE]: Falha ao registrar na auditoria: {log_err}")
 
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
         conn.commit()
         
     except Exception as e:

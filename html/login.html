@@ -76,6 +76,12 @@
     <script>
     document.addEventListener("DOMContentLoaded", function() {
         
+        // --- FORÇA A EXIBIÇÃO DO MODAL QUANDO EXISTIR ERRO ---
+        const modal = document.getElementById('modalErro');
+        if (modal) {
+            modal.style.display = 'flex'; // Força o container cinza/escuro a aparecer
+        }
+        
         // --- 1. LÓGICA DO BALÃO ---
         const balao = document.querySelector('.balao-glass');
         const inputEmail = document.getElementById('inputEmail');
