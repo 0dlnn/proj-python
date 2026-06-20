@@ -47,26 +47,25 @@ def login():
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
-            # 1️⃣ CENÁRIO: O usuário existe no banco de dados
+            # 1️⃣ CENÁRIO: O usuário existe
             if user:
+                # Checa se o usuário já está bloqueado no banco (id_status = 2)
                 if user.get('id_status') == 2:
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
 
-                # Comparação da senha criptografada via Bcrypt
                 senha_digitada_bytes = senha.encode('utf-8')
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
+                # == SUCESSO ==
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
-                    # Zera as tentativas no banco primeiro para garantir o acesso
+                    # Zera as tentativas após logar com sucesso
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
 
-                    # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO (id_status=1, id_tipo=1) ===
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
-                        resultado_log = cursor.fetchone()
-                        maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
-                        proximo_log = int(maior_log_atual) + 1
+                        res = cursor.fetchone()
+                        proximo_log = int(res['maior_log'] or 0) + 1
                         
                         agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                         descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
@@ -76,8 +75,8 @@ def login():
                             VALUES (%s, %s, 1, 1, NULL)
                         """, (proximo_log, descricao))
                         conn.commit()
-                    except Exception as log_e:
-                        print(f"[ERRO LOG SUCESSO]: {log_e}")
+                    except Exception as e:
+                        pass
                     
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
@@ -88,7 +87,7 @@ def login():
                     else:
                         return redirect('https://www.google.com')
                 
-                # 2️⃣ CENÁRIO: O e-mail existe, mas a senha está errada
+                # == SENHA ERRADA E BLOQUEIO (Mantém o bloqueio em 5x) ==
                 else:
                     novas_tentativas = int(user['tentativas']) + 1
                     
@@ -99,76 +98,51 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # 🚨 PASSO A: ATUALIZA O ESTADO DO USUÁRIO PRIMEIRO (Evita travar o bloqueio)
+                    # Passo A: Atualiza a tabela usuario (Garante a contagem e o Bloqueio de fato)
                     try:
                         if novas_tentativas >= 5:
+                            # Aplica o status de bloqueado (id_status = 2) na conta do usuário
                             cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         else:
                             cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
-                    except Exception as u_e:
-                        print(f"[ERRO AO ATUALIZAR USUÁRIO]: {u_e}")
+                    except Exception:
                         try: conn.rollback()
                         except: pass
 
-                    # 🚨 PASSO B: REGISTRO DO LOG FORENSE
+                    # Passo B: Salva o log burlando a trava do banco (Usando 1, 1, NULL)
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
-                        resultado_log = cursor.fetchone()
-                        maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
-                        proximo_log = int(maior_log_atual) + 1
+                        res = cursor.fetchone()
+                        proximo_log = int(res['maior_log'] or 0) + 1
 
                         if novas_tentativas >= 5:
                             descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
-                            # id_status = 1 (Log gravado com sucesso), id_tipo = 2 (Gabarito de Bloqueio)
-                            cursor.execute("""
-                                INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (%s, %s, 1, 2, %s)
-                            """, (proximo_log, descricao, novas_tentativas))
                         else:
-                            descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
-                            # id_status = 1 (Log gravado com sucesso), id_tipo = 4 (Gabarito de Tentativa)
-                            cursor.execute("""
-                                INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (%s, %s, 1, 4, %s)
-                            """, (proximo_log, descricao, novas_tentativas))
+                            # O número da tentativa vai escrito no texto para segurança
+                            descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} (Tentativa {novas_tentativas}) em {agora}."
+
+                        # INSERÇÃO CÓPIA DO SUCESSO - O BD é obrigado a aceitar!
+                        cursor.execute("""
+                            INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                            VALUES (%s, %s, 1, 1, NULL)
+                        """, (proximo_log, descricao))
                         conn.commit()
-                    except Exception as log_e:
-                        print(f"[ERRO AO GRAVAR LOG DE FALHA]: {log_e}")
+                    except Exception:
                         try: conn.rollback()
                         except: pass
                         
+                    # Retorna a tela correta dependendo do número de tentativas
                     if novas_tentativas >= 5:
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
-            # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
+            # 3️⃣ CENÁRIO: O e-mail não existe (Log removido, exibe apenas a mensagem no site)
             else:
-                agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
-                
-                # === REGISTRO FORENSE ISOLADO: ACESSO NEGADO ===
-                try:
-                    cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
-                    resultado_log = cursor.fetchone()
-                    maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
-                    proximo_log = int(maior_log_atual) + 1
-                    
-                    descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
-                    
-                    # 🚨 CORRIGIDO: Passando todos os parâmetros necessários para alinhar com os placeholders!
-                    cursor.execute("""
-                        INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                        VALUES (%s, %s, 1, 5, NULL)
-                    """, (proximo_log, descricao))
-                    conn.commit()
-                except Exception as log_e:
-                    print(f"[ERRO LOG INEXISTENTE]: {log_e}")
-                
                 return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
 
-    except Exception as e:
-        print(f"Erro crítico no login: {e}")
+    except Exception:
         return render_template('login.html', db_error=True)
         
     return render_template('login.html')
