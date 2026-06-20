@@ -91,7 +91,7 @@
         if (balao) {
             const posicoes = ['posicao-centro', 'posicao-superior-esquerda', 'posicao-superior-direita', 'posicao-inferior-esquerda', 'posicao-inferior-direita'];
             const sorteio = Math.floor(Math.random() * posicoes.length);
-            balao.classList.add(posicoes[sorteio]);
+            balao.className = 'balao-glass ' + posicoes[sorteio]; // Garante a injeção limpa da classe de posição
 
             if (inputEmail) inputEmail.readOnly = true;
             if (inputSenha) {
@@ -100,8 +100,8 @@
             }
         }
 
-        // --- PREPARAÇÃO DA TRAVA (Mantém o botão congelado até clicar no botão Concordo) ---
-        const deveTravar = "{{ trava_demo }}"; 
+        // --- PREPARAÇÃO DA TRAVA (Mais segura contra bugs de string) ---
+        const deveTravar = "{{ 'True' if trava_demo else 'False' }}"; 
         if (deveTravar === "True" && botaoLogin) {
             botaoLogin.disabled = true;
             botaoLogin.style.opacity = "0.6";
@@ -116,7 +116,7 @@
         const email = document.getElementById('inputEmail');
         const senha = document.getElementById('inputSenha');
         const botaoLogin = document.getElementById('btn-login');
-        const deveTravar = "{{ trava_demo }}";
+        const deveTravar = "{{ 'True' if trava_demo else 'False' }}"; // Tratamento idêntico aqui
 
         if (modal) modal.style.display = 'none';
         
