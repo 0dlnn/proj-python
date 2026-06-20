@@ -66,7 +66,7 @@ def login():
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
                         maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
-                        proximo_log = maior_log_atual + 1
+                        proximo_log = int(maior_log_atual) + 1
                         
                         agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                         descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
@@ -90,7 +90,7 @@ def login():
                 
                 # 2️⃣ CENÁRIO: O e-mail existe, mas a senha está errada
                 else:
-                    novas_tentativas = user['tentativas'] + 1
+                    novas_tentativas = int(user['tentativas']) + 1
                     
                     if request.headers.getlist("X-Forwarded-For"):
                         ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
@@ -112,7 +112,7 @@ def login():
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
                         maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
-                        proximo_log = maior_log_atual + 1
+                        proximo_log = int(maior_log_atual) + 1
 
                         if novas_tentativas >= 5:
                             # id_tipo = 2 corresponde a BLOQUEIO na sua tabela tipo
@@ -146,12 +146,12 @@ def login():
                     cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                     resultado_log = cursor.fetchone()
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
-                    proximo_log = maior_log_atual + 1
+                    proximo_log = int(maior_log_atual) + 1
                     
                     # Nova descrição personalizada conforme solicitado
                     descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
                     
-                    # id_tipo = 5 corresponde a ACESSO_NEGADO na sua tabela tipo
+                    # id_tipo = 5 corresponds a ACESSO_NEGADO na sua tabela tipo
                     cursor.execute("""
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                         VALUES (%s, %s, 1, 5, NULL)
@@ -166,7 +166,8 @@ def login():
         print(f"Erro crítico no login: {e}")
         return render_template('login.html', db_error=True)
         
-    return render_template('login.html')# =========================================================================
+    return render_template('login.html')
+# =========================================================================
 # === SUBSISTEMA DE CADASTRO E GERAÇÃO DE ASSINATURA DE SEGURANÇA ===
 # =========================================================================
 @app.route('/cadastro', methods=['GET', 'POST'])
