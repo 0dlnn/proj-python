@@ -63,14 +63,18 @@ def login():
 
                     # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO (id_tipo = 1) ===
                     try:
+                        cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+                        resultado_log = cursor.fetchone()
+                        maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+                        proximo_log = int(maior_log_atual) + 1
+                        
                         agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                         descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
                         
-                        # NULL delega o controle do ID para o Auto Increment do MySQL
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (NULL, %s, 1, 1, NULL)
-                        """, (descricao,))
+                            VALUES (%s, %s, 1, 1, NULL)
+                        """, (proximo_log, descricao))
                         conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG SUCESSO]: {log_e}")
@@ -95,28 +99,35 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # === PROCESSAMENTO UNIFICADO SEM CONFLITO DE ID MANUAL ===
+                    # === PROCESSAMENTO UNIFICADO DE BANCO E LOG (Evita conflitos de Lock) ===
                     try:
+                        # 1. Prepara a query de alteração de dados do usuário
                         if novas_tentativas >= 5:
-                            # Bloqueia o usuário mudando status para 2
                             cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
-                            
+                        else:
+                            cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+
+                        # 2. Busca o ID do próximo log sequencial
+                        cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+                        resultado_log = cursor.fetchone()
+                        maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+                        proximo_log = int(maior_log_atual) + 1
+
+                        # 3. Prepara o INSERT do log forense correspondente
+                        if novas_tentativas >= 5:
                             descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (NULL, %s, 1, 2, %s)
-                            """, (descricao, novas_tentativas))
+                                VALUES (%s, %s, 1, 2, %s)
+                            """, (proximo_log, descricao, novas_tentativas))
                         else:
-                            # Apenas incrementa o número de tentativas erradas
-                            cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
-                            
                             descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                                VALUES (NULL, %s, 1, 4, %s)
-                            """, (descricao, novas_tentativas))
+                                VALUES (%s, %s, 1, 4, %s)
+                            """, (proximo_log, descricao, novas_tentativas))
                         
-                        # Salva as duas alterações em um bloco seguro
+                        # 4. SALVA TUDO EM UM ÚNICO BLOCO SEGURO
                         conn.commit()
 
                     except Exception as log_e:
@@ -124,6 +135,7 @@ def login():
                         try: conn.rollback()
                         except: pass
                         
+                    # Retorno das caixas para o HTML
                     if novas_tentativas >= 5:
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
@@ -135,12 +147,17 @@ def login():
                 
                 # === REGISTRO FORENSE ISOLADO: ACESSO NEGADO (id_tipo = 5) ===
                 try:
+                    cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
+                    resultado_log = cursor.fetchone()
+                    maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
+                    proximo_log = int(maior_log_atual) + 1
+                    
                     descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
                     
                     cursor.execute("""
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                        VALUES (NULL, %s, 1, 5, NULL)
-                    """, (descricao,))
+                        VALUES (%s, %s, 1, 5, NULL)
+                    """, (proximo_log, descricao))
                     conn.commit()
                 except Exception as log_e:
                     print(f"[ERRO LOG INEXISTENTE]: {log_e}")
