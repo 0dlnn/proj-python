@@ -136,18 +136,17 @@ def login():
                             """, (novas_tentativas, ip_atual, email))
                             conn.commit()
                             
-                            # 2. POPULA A TABELA 'bloqueio'
+                            # 2. POPULA A TABELA 'bloqueio' COM O ID DO USUÁRIO
                             try:
                                 data_bloqueio = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
                                 motivo_bloqueio = "Bloqueio automático por excesso de tentativas falhas de senha."
                                 
-                                cursor.execute("SELECT COALESCE(MAX(num_bloqueio), 0) AS max_id FROM bloqueio")
-                                prox_id_bloqueio = cursor.fetchone()['max_id'] + 1
-                                
                                 cursor.execute("""
                                     INSERT INTO bloqueio (num_bloqueio, data, num_tentativa, motivo)
                                     VALUES (%s, %s, %s, %s)
-                                """, (prox_id_bloqueio, data_bloqueio, novas_tentativas, motivo_bloqueio))
+                                    ON DUPLICATE KEY UPDATE 
+                                    data = VALUES(data), num_tentativa = VALUES(num_tentativa), motivo = VALUES(motivo)
+                                """, (user['num_usuario'], data_bloqueio, novas_tentativas, motivo_bloqueio))
                                 conn.commit()
                             except Exception as e_tbl_bloqueio:
                                 print(f"[ERRO AO POPULAR TABELA BLOQUEIO]: {e_tbl_bloqueio}")
@@ -160,7 +159,7 @@ def login():
                         try: conn.rollback()
                         except: pass
                         
-                    # Passo B: Salva o log_atividade
+                    # Passo B: Salva o log_atividade (Enviando NULL no num_tentativa para não quebrar a Chave Estrangeira)
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
                         maior_log_atual = cursor.fetchone()['maior_log']
@@ -175,8 +174,8 @@ def login():
                             
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, %s, 1, %s, %s)
-                        """, (proximo_log, descricao, id_tipo, novas_tentativas))
+                            VALUES (%s, %s, 1, %s, NULL)
+                        """, (proximo_log, descricao, id_tipo))
                         conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
