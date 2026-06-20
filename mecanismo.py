@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 import mysql.connector
 from datetime import datetime
 import bcrypt  # <--- Biblioteca responsável por gerar hashes seguros de senha
-from zoneinfo import ZoneInfo
+from pytz import timezone # <--- Trocado ZoneInfo por pytz
 
 app = Flask(__name__, template_folder='html', static_folder='css')
 app.secret_key = 'chave_secreta_para_seguranca'
