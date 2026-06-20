@@ -57,6 +57,10 @@ def login():
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
+                    # Zera as tentativas no banco primeiro para garantir o acesso
+                    cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
+                    conn.commit()
+
                     # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO ===
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
@@ -71,11 +75,9 @@ def login():
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                             VALUES (%s, %s, 1, 1, NULL)
                         """, (proximo_log, descricao))
+                        conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG SUCESSO]: {log_e}")
-                    
-                    cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
-                    conn.commit()
                     
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
@@ -97,6 +99,14 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
+                    # 🚨 PRIORIDADE: Atualiza e commita as tentativas no banco imediatamente para garantir o incremento
+                    if novas_tentativas >= 5:
+                        cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
+                        conn.commit()
+                    else:
+                        cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+                        conn.commit()
+
                     # === REGISTRO FORENSE ISOLADO: TENTATIVAS E BLOQUEIOS ===
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
@@ -116,20 +126,17 @@ def login():
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                                 VALUES (%s, %s, 1, 4, %s)
                             """, (proximo_log, descricao, novas_tentativas))
+                        conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
                         
+                    # Retorno limpo e seguro das caixas para o HTML
                     if novas_tentativas >= 5:
-                        cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
-                        conn.commit()
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
-                        cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
-                        conn.commit()
                         return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
             # 3️⃣ CENÁRIO: O e-mail digitado NÃO existe no banco de dados
-            # === AJUSTADO COM PROTEÇÃO DE LOG ISOLADA ===
             else:
                 agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 
