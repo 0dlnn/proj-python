@@ -79,51 +79,66 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .col-tentativa { text-align: center; font-weight: bold; }
 
 /* ============================================================
-   BADGES E SELOS DE STATUS (NEXUS STYLE - CORES CORRIGIDAS)
+   BADGES E SELOS DE STATUS (NEXUS STYLE)
    ============================================================ */
 .badge {
     display: inline-block; padding: 5px 12px; border-radius: 20px;
     font-size: 10px; font-weight: bold; text-align: center;
 }
 
-/* VERMELHO - Estado Crítico: Bloqueio da conta por estouro de limite */
-.tag-bloqueio { 
-    background: rgba(244, 67, 54, 0.2); 
-    color: #ff8a80; 
-    border: 1px solid rgba(244, 67, 54, 0.3); 
+/* 1 - VERDE: Login com Sucesso */
+.tag-login {
+    background: rgba(67, 122, 34, 0.18);
+    color: #9be36d;
+    border: 1px solid rgba(155, 227, 109, 0.35);
 }
 
-/* VERDE - Sucesso Admin: Desbloqueio efetuado pela gerência */
-.tag-desbloqueio { 
-    background: rgba(76, 175, 80, 0.2); 
-    color: #b9f6ca; 
+/* 2 - VERMELHO: Bloqueio da conta */
+.tag-bloqueio {
+    background: rgba(255, 62, 62, 0.18);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.35);
+}
+
+/* 3 - VERDE: Desbloqueio da conta */
+.tag-desbloqueio {
+    background: rgba(67, 122, 34, 0.18);
+    color: #9be36d;
+    border: 1px solid rgba(155, 227, 109, 0.35);
+}
+
+/* 4 - AMARELO: Tentativa de Login Falha */
+.tag-tentativa {
+    background: rgba(255, 193, 7, 0.18);
+    color: #ffd54a;
+    border: 1px solid rgba(255, 213, 74, 0.35);
+}
+
+/* 5 - LARANJA: Acesso Negado (E-mail inexistente) */
+.tag-negado {
+    background: rgba(255, 159, 67, 0.18);
+    color: #ffbf7a;
+    border: 1px solid rgba(255, 191, 122, 0.35);
+}
+
+/* DEFAULT: Sistema */
+.tag-sistema {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d8d8d8;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Status: SUCESSO / ALERTA */
+.status-sucesso { 
+    background: rgba(76, 175, 80, 0.15); 
+    color: #81c784; 
     border: 1px solid rgba(76, 175, 80, 0.3); 
 }
-
-/* AMARELO - Alerta: Erros comuns de senha em tentativas de entrada */
-.tag-tentativa { 
-    background: rgba(255, 193, 7, 0.2); 
-    color: #ffd180; 
-    border: 1px solid rgba(255, 193, 7, 0.3); 
+.status-falha { 
+    background: rgba(244, 67, 54, 0.15); 
+    color: #e57373; 
+    border: 1px solid rgba(244, 67, 54, 0.3); 
 }
-
-/* CINZA AZULADO ESCURO - Neutro Externo: E-mail inexistente no banco */
-.tag-negado { 
-    background: rgba(96, 125, 139, 0.25); 
-    color: #b0bec5; 
-    border: 1px solid rgba(96, 125, 139, 0.4); 
-}
-
-/* CINZA CLARO - Neutro Interno: Logins normais do sistema */
-.tag-sistema { 
-    background: rgba(255, 255, 255, 0.08); 
-    color: #cfd8dc; 
-    border: 1px solid rgba(255, 255, 255, 0.15); 
-}
-
-/* Status Sucesso/Alerta */
-.status-sucesso { background: rgba(76, 175, 80, 0.15); color: #81c784; border: 1px solid rgba(76, 175, 80, 0.3); }
-.status-falha { background: rgba(244, 67, 54, 0.15); color: #e57373; border: 1px solid rgba(244, 67, 54, 0.3); }
 
 .sem-dados { text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic; padding: 30px !important; }
 .rodape-status { margin-top: 30px; font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }

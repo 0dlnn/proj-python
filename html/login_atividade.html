@@ -47,27 +47,35 @@
                         {% for log in lista_logs %}
                         <tr>
                             <td class="col-id">#{{ log.num_log }}</td>
+                            
                             <td>
-                                {% if "DESBLOQUEIO" in log.descricao %}
-                                    <span class="badge tag-desbloqueio">DESBLOQUEIO</span>
-                                {% elif "BLOQUEIO" in log.descricao %}
+                                {% if log.id_tipo == 1 %}
+                                    <span class="badge tag-login">LOGIN COM SUCESSO</span>
+                                {% elif log.id_tipo == 2 %}
                                     <span class="badge tag-bloqueio">BLOQUEIO</span>
-                                {% elif "TENTATIVA_LOGIN" in log.descricao or "TENTATIVA DE LOGIN" in log.descricao %}
+                                {% elif log.id_tipo == 3 %}
+                                    <span class="badge tag-desbloqueio">DESBLOQUEIO</span>
+                                {% elif log.id_tipo == 4 %}
                                     <span class="badge tag-tentativa">TENTATIVA DE LOGIN</span>
-                                {% elif "ACESSO_NEGADO" in log.descricao or "ACESSO NEGADO" in log.descricao %}
+                                {% elif log.id_tipo == 5 %}
                                     <span class="badge tag-negado">ACESSO NEGADO</span>
                                 {% else %}
                                     <span class="badge tag-sistema">SISTEMA</span>
                                 {% endif %}
                             </td>
+                            
                             <td class="col-descricao">{{ log.descricao }}</td>
+                            
                             <td>
-                                {% if log.id_status == 1 %}
+                                {% if log.id_tipo == 1 or log.id_tipo == 3 %}
                                     <span class="badge status-sucesso">SUCESSO</span>
+                                {% elif log.id_tipo == 2 or log.id_tipo == 4 or log.id_tipo == 5 %}
+                                    <span class="badge status-falha">ALERTA</span>
                                 {% else %}
                                     <span class="badge status-falha">ALERTA</span>
                                 {% endif %}
                             </td>
+                            
                             <td class="col-tentativa">
                                 {{ log.num_tentativa if log.num_tentativa else '-' }}
                             </td>
