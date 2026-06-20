@@ -53,7 +53,7 @@
             {% if bloqueado %}
                 <i class="fa-solid fa-user-lock" style="color: #ff3e3e;"></i>
                 <h3>Acesso Bloqueado</h3>
-                <p>Esta conta foi suspensa por excesso de tentativas. <br><strong>Entre em contato com o suporte técnico.</strong></p>
+                <p>Esta conta foi suspensa por excesso de tentativas ({{ tentativas if tentativas else '5' }}/5). <br><strong>Entre em contato com o suporte técnico.</strong></p>
             
             {% elif conta_inexistente %}
                 <i class="fa-solid fa-user-xmark" style="color: #ff9f43;"></i>
@@ -63,7 +63,9 @@
             {% else %}
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <h3>SENHA INCORRETA</h3>
-                <p>As credenciais informadas não coincidem com nosso banco de dados. <br>Por favor, tente novamente ou entre em contato com o administrador.</p>
+                <p>As credenciais informadas não coincidem com nosso banco de dados.<br>
+                Esta é a tentativa <strong>{{ tentativas if tentativas else '1' }}</strong> de 5.<br>
+                Por favor, tente novamente ou entre em contato com o administrador.</p>
             {% endif %}
             
             <button onclick="liberarAcesso()" class="botao-concordo">Concordo</button>
@@ -85,7 +87,6 @@
             const sorteio = Math.floor(Math.random() * posicoes.length);
             balao.classList.add(posicoes[sorteio]);
 
-            // SOLUÇÃO: Mudado de .disabled para .readOnly para permitir que o formulário envie os dados ao Flask
             if (inputEmail) inputEmail.readOnly = true;
             if (inputSenha) {
                 inputSenha.readOnly = true;
@@ -113,7 +114,6 @@
 
         if (modal) modal.style.display = 'none';
         
-        // Remove a restrição de leitura dos inputs para permitir nova digitação
         if (email) email.readOnly = false;
         if (senha) {
             senha.readOnly = false;
