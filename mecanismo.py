@@ -61,7 +61,7 @@ def login():
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
 
-                    # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO ===
+                    # === REGISTRO FORENSE ISOLADO: LOGIN COM SUCESSO (id_tipo = 1) ===
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
@@ -75,7 +75,7 @@ def login():
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                             VALUES (%s, %s, 1, 1, NULL)
                         """, (proximo_log, descricao))
-                        conn.commit() # Commit do log de sucesso
+                        conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG SUCESSO]: {log_e}")
                     
@@ -107,7 +107,7 @@ def login():
                         cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                         conn.commit()
 
-                    # === REGISTRO FORENSE ISOLADO: TENTATIVAS E BLOQUEIOS ===
+                    # === REGISTRO FORENSE ISOLADO: TENTATIVAS (id_tipo = 4) E BLOQUEIOS (id_tipo = 2) ===
                     try:
                         cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                         resultado_log = cursor.fetchone()
@@ -115,22 +115,23 @@ def login():
                         proximo_log = maior_log_atual + 1
 
                         if novas_tentativas >= 5:
+                            # id_tipo = 2 corresponde a BLOQUEIO na sua tabela tipo
                             descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                                 VALUES (%s, %s, 1, 2, %s)
                             """, (proximo_log, descricao, novas_tentativas))
                         else:
+                            # id_tipo = 4 corresponde a TENTATIVA_LOGIN na sua tabela tipo
                             descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
                             cursor.execute("""
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                                 VALUES (%s, %s, 1, 4, %s)
                             """, (proximo_log, descricao, novas_tentativas))
-                        conn.commit() # 🚨 CORRIGIDO: Agora força o salvamento do log de erro no banco!
+                        conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
                         
-                    # Retorno das caixas para o HTML
                     if novas_tentativas >= 5:
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
@@ -140,18 +141,22 @@ def login():
             else:
                 agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 
+                # === REGISTRO FORENSE ISOLADO: ACESSO NEGADO (id_tipo = 5) ===
                 try:
                     cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
                     resultado_log = cursor.fetchone()
                     maior_log_atual = resultado_log['maior_log'] if resultado_log['maior_log'] is not None else 0
                     proximo_log = maior_log_atual + 1
                     
-                    descricao = f"ACESSO_NEGADO: Tentativa com conta inexistente utilizando o e-mail: {email} em {agora}."
+                    # Nova descrição personalizada conforme solicitado
+                    descricao = f"ACESSO_NEGADO: A conta do e-mail [{email}] nao pertence ao banco de dados mysql em {agora}."
+                    
+                    # id_tipo = 5 corresponde a ACESSO_NEGADO na sua tabela tipo
                     cursor.execute("""
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                         VALUES (%s, %s, 1, 5, NULL)
                     """, (proximo_log, descricao))
-                    conn.commit() # 🚨 CORRIGIDO: Força o salvamento de conta inexistente!
+                    conn.commit()
                 except Exception as log_e:
                     print(f"[ERRO LOG INEXISTENTE]: {log_e}")
                 
@@ -161,8 +166,7 @@ def login():
         print(f"Erro crítico no login: {e}")
         return render_template('login.html', db_error=True)
         
-    return render_template('login.html')
-# =========================================================================
+    return render_template('login.html')# =========================================================================
 # === SUBSISTEMA DE CADASTRO E GERAÇÃO DE ASSINATURA DE SEGURANÇA ===
 # =========================================================================
 @app.route('/cadastro', methods=['GET', 'POST'])
