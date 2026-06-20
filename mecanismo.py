@@ -58,7 +58,7 @@ def login():
             agente_usuario = request.headers.get('User-Agent', 'Desconhecido')
 
             conn = get_db_connection()
-            cursor = conn.connector.cursor(dictionary=True) if hasattr(conn, 'connector') else conn.cursor(dictionary=True)
+            cursor = conn.cursor(dictionary=True) # <- Corrigido para o padrão puro do Render
             
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -72,7 +72,7 @@ def login():
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
-                    # Mantém o reset idêntico ao código funcional
+                    # Mantém o reset idêntico ao seu código original funcional
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
                     
@@ -81,7 +81,7 @@ def login():
                     session['user_nome'] = user['nome']
                     session['perfil'] = int(user.get('perfil', 0))
                     
-                    # REGISTRO DE LOG COMPLEMENTAR (Executado após a validação da sessão ser garantida)
+                    # REGISTRO DE LOG COMPLEMENTAR (Isolado em try/except para não quebrar o login)
                     try:
                         agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                         cursor.execute("""
@@ -95,7 +95,7 @@ def login():
                         """, (ip_atual, agente_usuario, user['num_usuario']))
                         conn.commit()
                     except Exception as log_err:
-                        print(f"[AVISO OMITIDO] Falha ao gravar logs de sucesso: {log_err}")
+                        print(f"[AVISO LOG] Falha ao gravar histórico: {log_err}")
 
                     cursor.close()
                     conn.close()
@@ -151,7 +151,6 @@ def login():
         return render_template('login.html', db_error=True)
         
     finally:
-        # Fechamento seguro de cursores e conexões para evitar travamento do pool do MySQL
         if cursor:
             try: cursor.close()
             except: pass
@@ -207,7 +206,7 @@ def cadastro():
             conn.commit() 
             return redirect(url_for('login'))
         except Exception as e:
-            print(f"Erro ao salvar no NEXUS: {e}")
+            print(f"Erro ao salvar: {e}")
             return f"<h1>Erro técnico ao salvar: {e}</h1>"
         finally:
             if cursor: try: cursor.close()
@@ -270,7 +269,7 @@ def admin_log_activity():
         except: pass
 
 # =========================================================================
-# === SISTEMA DE ENDPOINTS: CONSULTA DINÂMICA DE RASTREAMENTO ===
+# === SISTEMA DE ENDPOINTS ===
 # =========================================================================
 @app.route('/buscar_ip_bloqueio', methods=['POST'])
 def buscar_ip_bloqueio():
