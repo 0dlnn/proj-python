@@ -1,106 +1,103 @@
-/* =========================================================================
-   === CONFIGURAÇÕES GERAIS E PARAMETRIZAÇÃO DE ESTRUTURA ===
-   ========================================================================= */
+/* ============================================================
+   RESET E FUNDO (NEXUS CORE DESIGN - IDENTICO AO RESTO DO SITE)
+   ============================================================ */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+    margin: 0; padding: 0; box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-    background: linear-gradient(135deg, #2c1a24 0%, #19111c 100%);
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(circle at top left, #2e1a47, #6b2d3c, #1a1b4b);
     padding: 20px;
 }
 
-/* =========================================================================
-   === CONTAINER PRINCIPAL DO PAINEL DE CONTROLE ===
-   ========================================================================= */
-.container-painel {
+/* ============================================================
+   CARD PRINCIPAL GLASSMORPHISM
+   ============================================================ */
+.cartao-glass {
     width: 100%;
-    max-width: 1150px;
-    background-color: rgba(54, 38, 48, 0.85);
-    border-radius: 24px;
+    max-width: 1000px; /* Expandido apenas para caber a tabela sem quebrar o design */
     padding: 40px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border-radius: 45px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    text-align: center;
 }
 
-/* =========================================================================
-   === MENU SUPERIOR DE NAVEGAÇÃO POR ABAS ===
-   ========================================================================= */
-.menu-superior {
-    display: flex;
-    justify-content: center;
-    background-color: rgba(29, 19, 26, 0.9);
-    border-radius: 50px;
-    padding: 8px;
-    margin-bottom: 30px;
+/* ============================================================
+   NAVEGAÇÃO (MENU SUPERIOR COM ÍCONES)
+   ============================================================ */
+.menu-navegacao {
+    display: flex; justify-content: space-around; align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px; border-radius: 20px; margin-bottom: 30px;
     gap: 10px;
 }
 
-.menu-superior .aba {
-    color: #b5a6b0;
-    text-decoration: none;
-    padding: 12px 24px;
-    font-weight: 600;
-    font-size: 14px;
-    border-radius: 30px;
+.menu-navegacao a {
+    color: rgba(255, 255, 255, 0.6) !important;
+    text-decoration: none; font-size: 11px; font-weight: bold;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 12px;
     transition: all 0.3s ease;
 }
 
-.menu-superior .aba:hover {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.05);
+.menu-navegacao a i {
+    color: rgba(255, 255, 255, 0.6) !important;
 }
 
-.menu-superior .aba.active {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+.menu-navegacao a:hover, .menu-navegacao a.active {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1);
 }
 
-.menu-superior .sair {
-    color: #e57373;
+.menu-navegacao a.active i, .menu-navegacao a:hover i {
+    color: #ffffff !important;
 }
 
-.menu-superior .sair:hover {
-    background-color: rgba(229, 115, 115, 0.1);
+.menu-navegacao a.sair {
+    color: #e57373 !important;
+}
+.menu-navegacao a.sair i {
+    color: #e57373 !important;
+}
+.menu-navegacao a.sair:hover {
+    background: rgba(229, 115, 115, 0.1);
 }
 
-/* =========================================================================
-   === CABEÇALHO DA CENTRAL TÉCNICA ===
-   ========================================================================= */
-.cabecalho-central {
-    text-align: center;
-    margin-bottom: 35px;
+/* ============================================================
+   CABEÇALHO
+   ============================================================ */
+.secao-cabecalho {
+    margin-bottom: 30px;
 }
 
-.cabecalho-central h2 {
-    color: #ffffff;
-    font-size: 28px;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
+.secao-cabecalho h2 {
+    color: #ffffff !important;
+    font-size: 26px;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
 }
 
-.cabecalho-central p {
-    color: #c9b3c2;
-    font-size: 14px;
+.secao-cabecalho p {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 13px;
 }
 
-/* =========================================================================
-   === GRID DA TABELA DE AUDITORIA FORENSE ===
-   ========================================================================= */
+/* ============================================================
+   ESTRUTURA FORENSE DA TABELA
+   ============================================================ */
 .container-tabela {
     width: 100%;
-    background-color: rgba(38, 25, 34, 0.7);
-    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     margin-bottom: 25px;
 }
 
@@ -111,20 +108,21 @@ body {
 }
 
 .tabela-logs th {
-    background-color: rgba(24, 15, 21, 0.9);
+    background: rgba(0, 0, 0, 0.4);
     color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: bold;
     text-transform: uppercase;
     padding: 16px 20px;
     letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .tabela-logs td {
-    padding: 16px 20px;
-    color: #e2d5de;
-    font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 14px 20px;
+    color: #ffffff;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
 }
 
@@ -133,102 +131,37 @@ body {
 }
 
 .tabela-logs tr:hover td {
-    background-color: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-/* =========================================================================
-   === ESTILIZAÇÃO ESPECÍFICA DAS COLUNAS ===
-   ========================================================================= */
-.col-id {
-    font-weight: 700;
-    color: #b5a6b0;
-}
+/* TEXTOS ESPECÍFICOS */
+.col-id { font-weight: bold; color: #ffcc00 !important; }
+.col-descricao { font-weight: 500; }
+.col-tentativa { font-weight: bold; text-align: center; }
 
-.col-descricao {
-    font-weight: 500;
-    letter-spacing: 0.3px;
-}
-
-.col-tentativa {
-    font-weight: 600;
-    text-align: center;
-}
-
-/* =========================================================================
-   === BADGES BASE DE STATUS E TIPOS ===
-   ========================================================================= */
+/* ============================================================
+   BADGES DE CYBERSECURITY STATUS
+   ============================================================ */
 .badge {
     display: inline-block;
-    padding: 6px 14px;
+    padding: 5px 12px;
     border-radius: 30px;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: bold;
     letter-spacing: 0.5px;
     text-align: center;
-    white-space: nowrap;
 }
 
-.status-sucesso {
-    background-color: rgba(76, 175, 80, 0.15);
-    color: #81c784;
-    border: 1px solid rgba(76, 175, 80, 0.3);
-}
+/* Categoria de Atividade */
+.tag-bloqueio { background: rgba(244, 67, 54, 0.25); color: #ff8a80; border: 1px solid rgba(244, 67, 54, 0.4); }
+.tag-desbloqueio { background: rgba(76, 175, 80, 0.25); color: #b9f6ca; border: 1px solid rgba(76, 175, 80, 0.4); }
+.tag-tentativa { background: rgba(255, 152, 0, 0.25); color: #ffd180; border: 1px solid rgba(255, 152, 0, 0.4); }
+.tag-negado { background: rgba(216, 27, 96, 0.3); color: #ff80ab; border: 1px solid rgba(216, 27, 96, 0.5); }
+.tag-sistema { background: rgba(255, 255, 255, 0.1); color: #cfd8dc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
-.status-falha {
-    background-color: rgba(244, 67, 54, 0.15);
-    color: #e57373;
-    border: 1px solid rgba(244, 67, 54, 0.3);
-}
+/* Status da Ação */
+.status-sucesso { background: rgba(76, 175, 80, 0.2); color: #81c784; border: 1px solid rgba(76, 175, 80, 0.4); }
+.status-falha { background: rgba(244, 67, 54, 0.2); color: #e57373; border: 1px solid rgba(244, 67, 54, 0.4); }
 
-/* =========================================================================
-   === BADGES DAS NOVAS CATEGORIAS EM CAIXA ALTA (CYBERSECURITY SOC STYLE) ===
-   ========================================================================= */
-.tag-bloqueio {
-    background-color: rgba(244, 67, 54, 0.2);
-    color: #ff8a80;
-    border: 1px solid rgba(244, 67, 54, 0.4);
-}
-
-.tag-desbloqueio {
-    background-color: rgba(76, 175, 80, 0.2);
-    color: #b9f6ca;
-    border: 1px solid rgba(76, 175, 80, 0.4);
-}
-
-.tag-tentativa {
-    background-color: rgba(255, 152, 0, 0.2);
-    color: #ffd180;
-    border: 1px solid rgba(255, 152, 0, 0.4);
-}
-
-.tag-negado {
-    background-color: rgba(216, 27, 96, 0.25);
-    color: #ff80ab;
-    border: 1px solid rgba(216, 27, 96, 0.45);
-}
-
-.tag-sistema {
-    background-color: rgba(158, 158, 158, 0.15);
-    color: #cfd8dc;
-    border: 1px solid rgba(158, 158, 158, 0.3);
-}
-
-/* =========================================================================
-   === ELEMENTOS EXCEPCIONAIS E RODAPÉ ===
-   ========================================================================= */
-.sem-dados {
-    text-align: center;
-    color: #b5a6b0;
-    font-style: italic;
-    padding: 40px !important;
-}
-
-.rodape-admin {
-    text-align: center;
-    color: #9c8e98;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 5px;
-}
+.sem-dados { text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic; padding: 30px !important; }
+.rodape-status { color: rgba(255, 255, 255, 0.4); font-size: 11px; font-weight: bold; letter-spacing: 2px; }
