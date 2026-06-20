@@ -75,7 +75,7 @@ def login():
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                             VALUES (%s, %s, 1, 1, NULL)
                         """, (proximo_log, descricao))
-                        conn.commit()
+                        conn.commit() # Commit do log de sucesso
                     except Exception as log_e:
                         print(f"[ERRO LOG SUCESSO]: {log_e}")
                     
@@ -99,7 +99,7 @@ def login():
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # 🚨 PRIORIDADE: Atualiza e commita as tentativas no banco imediatamente para garantir o incremento
+                    # Prioridade: Atualiza e commita as tentativas no banco imediatamente
                     if novas_tentativas >= 5:
                         cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                         conn.commit()
@@ -126,11 +126,11 @@ def login():
                                 INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                                 VALUES (%s, %s, 1, 4, %s)
                             """, (proximo_log, descricao, novas_tentativas))
-                        conn.commit()
+                        conn.commit() # 🚨 CORRIGIDO: Agora força o salvamento do log de erro no banco!
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
                         
-                    # Retorno limpo e seguro das caixas para o HTML
+                    # Retorno das caixas para o HTML
                     if novas_tentativas >= 5:
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     else:
@@ -151,7 +151,7 @@ def login():
                         INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                         VALUES (%s, %s, 1, 5, NULL)
                     """, (proximo_log, descricao))
-                    conn.commit()
+                    conn.commit() # 🚨 CORRIGIDO: Força o salvamento de conta inexistente!
                 except Exception as log_e:
                     print(f"[ERRO LOG INEXISTENTE]: {log_e}")
                 
@@ -162,7 +162,6 @@ def login():
         return render_template('login.html', db_error=True)
         
     return render_template('login.html')
-
 # =========================================================================
 # === SUBSISTEMA DE CADASTRO E GERAÇÃO DE ASSINATURA DE SEGURANÇA ===
 # =========================================================================
