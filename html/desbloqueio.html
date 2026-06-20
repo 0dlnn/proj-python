@@ -15,17 +15,20 @@
             <a href="#" class="active">
                 <i class="fa-solid fa-unlock-keyhole"></i> DESBLOQUEIO
             </a>
+            <a href="{{ url_for('admin_log_activity') }}">
+                <i class="fa-solid fa-clipboard-list"></i> LOG DE ATIVIDADES
+            </a>
             <a href="{{ url_for('admin_usuarios') }}">
                 <i class="fa-solid fa-users-gear"></i> USUÁRIOS
             </a>
-            <a href="{{ url_for('login') }}">
+            <a href="{{ url_for('logout') }}" class="sair" style="color: #e57373;">
                 <i class="fa-solid fa-power-off"></i> SAIR
             </a>
         </nav>
 
         <div class="secao-cabecalho">
             <h2>Central de Desbloqueio</h2>
-            <p>Analise de ID com IP para controle e desbloqueio.</p>
+            <p>Análise de ID com IP para controle e desbloqueio.</p>
         </div>
 
         <form action="{{ url_for('finalizar_desbloqueio') }}" method="POST" class="formulario-desbloqueio" onsubmit="return validarEnvio()">
@@ -36,7 +39,7 @@
                     <input type="text" name="id_usuario" id="id_usuario" placeholder="ID do Usuário" required>
                 </div>
                 
-                <button type="button" class="botao-amarelo-sincronizar" onclick="buscarIP()" title="Sincronizar IP do usuario.">
+                <button type="button" class="botao-amarelo-sincronizar" onclick="buscarIP()" title="Sincronizar IP do usuário.">
                     <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
             </div>

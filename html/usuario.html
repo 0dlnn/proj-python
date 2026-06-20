@@ -15,10 +15,13 @@
             <a href="{{ url_for('admin_desbloqueio') }}">
                 <i class="fa-solid fa-unlock-keyhole"></i> DESBLOQUEIO
             </a>
+            <a href="{{ url_for('admin_log_activity') }}">
+                <i class="fa-solid fa-clipboard-list"></i> LOG DE ATIVIDADES
+            </a>
             <a href="#" class="active">
                 <i class="fa-solid fa-users-gear"></i> USUÁRIOS
             </a>
-            <a href="{{ url_for('login') }}">
+            <a href="{{ url_for('logout') }}" class="sair" style="color: #e57373;">
                 <i class="fa-solid fa-power-off"></i> SAIR
             </a>
         </nav>
@@ -43,8 +46,7 @@
                         <th>E-MAIL</th>
                         <th>TIPO PERFIL</th>
                         <th>STATUS / RASTREIO</th>
-                        <th>SIGLA ADMIN</th> <!-- COLUNA ADICIONADA -->
-                    </tr>
+                        <th>SIGLA ADMIN</th> </tr>
                 </thead>
                 <tbody>
                     {% for u in lista %}
@@ -72,7 +74,6 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <!-- CÉLULA ADICIONADA: EXIBE A SIGLA (LS, AR, EM) OU UM TRAÇO SE ESTIVER EM BRANCO -->
                         <td class="texto-branco" style="text-align: center; font-weight: bold; letter-spacing: 1px;">
                             {{ u.responsavel_desbloqueio if u.responsavel_desbloqueio else '-' }}
                         </td>
