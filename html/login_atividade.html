@@ -48,13 +48,13 @@
                         <tr>
                             <td class="col-id">#{{ log.num_log }}</td>
                             <td>
-                                {% if "BLOQUEIO" in log.descricao %}
-                                    <span class="badge tag-bloqueio">BLOQUEIO</span>
-                                {% elif "DESBLOQUEIO" in log.descricao %}
+                                {% if "DESBLOQUEIO" in log.descricao %}
                                     <span class="badge tag-desbloqueio">DESBLOQUEIO</span>
-                                {% elif "TENTATIVA_LOGIN" in log.descricao %}
+                                {% elif "BLOQUEIO" in log.descricao %}
+                                    <span class="badge tag-bloqueio">BLOQUEIO</span>
+                                {% elif "TENTATIVA_LOGIN" in log.descricao or "TENTATIVA DE LOGIN" in log.descricao %}
                                     <span class="badge tag-tentativa">TENTATIVA DE LOGIN</span>
-                                {% elif "ACESSO_NEGADO" in log.descricao %}
+                                {% elif "ACESSO_NEGADO" in log.descricao or "ACESSO NEGADO" in log.descricao %}
                                     <span class="badge tag-negado">ACESSO NEGADO</span>
                                 {% else %}
                                     <span class="badge tag-sistema">SISTEMA</span>
