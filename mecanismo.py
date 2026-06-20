@@ -88,7 +88,7 @@ def login():
                 # SUCESSO: Reseta o contador de falhas acumuladas do usuário
                 cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                 
-                # Gravando o log forense de atividade bem-sucedida (Usando NULL na FK para evitar crash de restrição)
+                # Gravando o log forense de atividade bem-sucedida
                 agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                 sql_sucesso_log = """
                     INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
@@ -98,19 +98,38 @@ def login():
                 cursor.execute(sql_sucesso_log, (msg_sucesso,))
                 conn.commit()
                 
+                # =========================================================
+                # 🛡️ TELEMETRIA DE DIAGNÓSTICO (O QUE APARECE NO TERMINAL)
+                # =========================================================
+                print("\n" + "="*50)
+                print("[DIAGNÓSTICO] LOGIN COM SUCESSO DETECTADO!")
+                print(f"[DIAGNÓSTICO] Chaves vindas do banco: {list(user.keys())}")
+                print(f"[DIAGNÓSTICO] Valor de 'perfil': {user.get('perfil')} | Tipo: {type(user.get('perfil'))}")
+                print(f"[DIAGNÓSTICO] Valor de 'id_status': {user.get('id_status')} | Tipo: {type(user.get('id_status'))}")
+                print("="*50 + "\n")
+                # =========================================================
+
                 # Alocação limpa de chaves de privilégio na Sessão do Flask
                 session.permanent = False
                 session['user_id'] = user['num_usuario']
                 session['user_nome'] = user['nome']
-                session['perfil'] = user.get('perfil', 0)
                 
-                # Fechamento manual imediato antes do redirecionamento de rota para liberar o pool
+                # Correção preventiva: Força a conversão para inteiro para matar os seus 50% de chance de erro!
+                try:
+                    session['perfil'] = int(user.get('perfil', 0))
+                except (ValueError, TypeError):
+                    session['perfil'] = 0
+                
+                # Fechamento manual imediato antes do redirecionamento
                 cursor.close()
                 conn.close()
                 
+                # Avaliação do redirecionamento
                 if session['perfil'] == 1:
+                    print("[DIAGNÓSTICO] Redirecionando para /admin/desbloqueio")
                     return redirect(url_for('admin_desbloqueio'))
                 else:
+                    print(f"[DIAGNÓSTICO] Redirecionando para Google (Perfil verificado: {session['perfil']})")
                     return redirect('https://www.google.com')
             
             # 3️⃣ CENÁRIO C: O e-mail existe, mas a senha está incorreta
