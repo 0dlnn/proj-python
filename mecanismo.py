@@ -279,12 +279,18 @@ def finalizar_desbloqueio():
     cursor = None
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True) # Usando dicionário para facilitar
         
-        # 1. Desativa a checagem de chaves estrangeiras para permitir o insert direto
+        # === ETAPA 1: DESCUBRA O MAIOR ID ATUAL (Select Simples) ===
+        cursor.execute("SELECT MAX(num_desbloqueio) as maior_id FROM desbloqueio")
+        resultado = cursor.fetchone()
+        
+        # Se a tabela estiver vazia, o maior ID é 0. Se não, pega o número dela.
+        maior_id_atual = resultado['maior_id'] if resultado['maior_id'] is not None else 0
+        proximo_id = maior_id_atual + 1  # Somamos 1 no Python mesmo!
+        
+        # === ETAPA 2: ATUALIZA O STATUS DO USUÁRIO ===
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-        
-        # 2. ATUALIZA A TABELA 'usuario'
         cursor.execute("""
             UPDATE usuario 
             SET id_status = 1, 
@@ -294,16 +300,15 @@ def finalizar_desbloqueio():
             WHERE num_usuario = %s
         """, (sigla_responsavel, id_usuario))
         
-        # 3. POPULA A TABELA 'desbloqueio' (Agora vai entrar perfeitamente!)
+        # === ETAPA 3: INSERE NO DESBLOQUEIO USANDO O ID QUE CALCULAMOS ===
         cursor.execute("""
-            INSERT INTO desbloqueio (data, usuario_responsavel, num_bloqueio) 
-            VALUES (CURDATE(), %s, %s)
-        """, (id_admin_logado, id_usuario))
+            INSERT INTO desbloqueio (num_desbloqueio, data, usuario_responsavel, num_bloqueio) 
+            VALUES (%s, CURDATE(), %s, %s)
+        """, (proximo_id, id_admin_logado, id_usuario))
         
-        # 4. Reativa as checagens de segurança do MySQL
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
         
-        # 5. ALIMENTA A TABELA 'log_atividade'
+        # === ETAPA 4: LOG DE ATIVIDADES ===
         try:
             agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
             descricao_log = f"DESBLOQUEIO: O administrador [{sigla_responsavel}] realizou a liberacao do ID #{id_usuario} em {agora}."
@@ -311,16 +316,15 @@ def finalizar_desbloqueio():
                 INSERT INTO log_atividade (descricao, id_status, id_tipo, num_tentativa)
                 VALUES (%s, 1, 2, NULL)
             """, (descricao_log,))
-        except Exception as log_err:
-            print(f"[AVISO LOG_ATIVIDADE] Falha segura ao gerar histórico: {log_err}")
+        except:
+            pass
 
-        # Confirma todas as transações no banco
         conn.commit()
         
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"\n[CRASH NO PROCESSO DE DESBLOQUEIO]: {e}\n")
+        print(f"[ERRO]: {e}")
         
     finally:
         if cursor:
