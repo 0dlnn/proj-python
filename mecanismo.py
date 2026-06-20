@@ -39,112 +39,347 @@ def home():
 def login():
     try:
         if request.method == 'POST':
+
             email = request.form.get('email')
             senha = request.form.get('senha')
+
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
+
+            cursor.execute(
+                "SELECT * FROM usuario WHERE email = %s",
+                (email,)
+            )
+
             user = cursor.fetchone()
-            
-            # 1️⃣ CENÁRIO: O usuário existe
+
+            # =====================================================
+            # USUÁRIO EXISTE
+            # =====================================================
             if user:
-                # Checa se o usuário já está bloqueado no banco (id_status = 2)
+
+                # Usuário já bloqueado
                 if user.get('id_status') == 2:
-                    return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
+                    return render_template(
+                        'login.html',
+                        bloqueado=True,
+                        email_digitado=email,
+                        trava_demo=True
+                    )
 
                 senha_digitada_bytes = senha.encode('utf-8')
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
 
-                # == SUCESSO ==
-                if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
-                    # Zera as tentativas após logar com sucesso
-                    cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
+                # =====================================================
+                # LOGIN COM SUCESSO
+                # =====================================================
+                if bcrypt.checkpw(
+                    senha_digitada_bytes,
+                    senha_banco_bytes
+                ):
+
+                    cursor.execute(
+                        "UPDATE usuario SET tentativas = 0 WHERE email = %s",
+                        (email,)
+                    )
+
                     conn.commit()
 
                     try:
-                        cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
-                        res = cursor.fetchone()
-                        proximo_log = int(res['maior_log'] or 0) + 1
-                        
-                        agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
-                        descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
-                        
+
+                        cursor.execute(
+                            "SELECT MAX(num_log) as maior_log FROM log_atividade"
+                        )
+
+                        resultado = cursor.fetchone()
+
+                        proximo_log = int(
+                            resultado['maior_log'] or 0
+                        ) + 1
+
+                        agora = datetime.now(
+                            timezone('America/Sao_Paulo')
+                        ).strftime('%d/%m/%Y %H:%M:%S')
+
+                        descricao = (
+                            f"LOGIN: O usuario "
+                            f"[{user['nome']}] ({email}) "
+                            f"acessou a plataforma com sucesso em {agora}."
+                        )
+
                         cursor.execute("""
-                            INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, %s, 1, 1, NULL)
-                        """, (proximo_log, descricao))
+                            INSERT INTO log_atividade
+                            (
+                                num_log,
+                                descricao,
+                                id_status,
+                                id_tipo,
+                                num_tentativa
+                            )
+                            VALUES
+                            (
+                                %s,
+                                %s,
+                                1,
+                                1,
+                                NULL
+                            )
+                        """, (
+                            proximo_log,
+                            descricao
+                        ))
+
                         conn.commit()
+
                     except Exception as e:
-                        pass
-                    
+                        print(f"[ERRO LOG LOGIN]: {e}")
+
                     session['user_id'] = user['num_usuario']
                     session['user_nome'] = user['nome']
                     session['perfil'] = user.get('perfil', 0)
-                    
+
                     if session['perfil'] == 1:
-                        return redirect(url_for('admin_desbloqueio'))
-                    else:
-                        return redirect('https://www.google.com')
-                
-                # == SENHA ERRADA E BLOQUEIO (Mantém o bloqueio em 5x) ==
+                        return redirect(
+                            url_for('admin_desbloqueio')
+                        )
+
+                    return redirect(
+                        'https://www.google.com'
+                    )
+
+                # =====================================================
+                # SENHA ERRADA
+                # =====================================================
                 else:
-                    novas_tentativas = int(user['tentativas']) + 1
-                    
-                    if request.headers.getlist("X-Forwarded-For"):
-                        ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
+
+                    novas_tentativas = int(
+                        user['tentativas']
+                    ) + 1
+
+                    if request.headers.getlist(
+                        "X-Forwarded-For"
+                    ):
+                        ip_atual = request.headers.getlist(
+                            "X-Forwarded-For"
+                        )[0].split(',')[0].strip()
                     else:
                         ip_atual = request.remote_addr
-                    
-                    agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
 
-                    # Passo A: Atualiza a tabela usuario (Garante a contagem e o Bloqueio de fato)
+                    agora = datetime.now(
+                        timezone('America/Sao_Paulo')
+                    ).strftime('%d/%m/%Y %H:%M:%S')
+
                     try:
+
+                        # Atualiza tentativas
                         if novas_tentativas >= 5:
-                            # Aplica o status de bloqueado (id_status = 2) na conta do usuário
-                            cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
+
+                            cursor.execute("""
+                                UPDATE usuario
+                                SET
+                                    tentativas = %s,
+                                    id_status = 2,
+                                    ultimo_ip_bloqueio = %s
+                                WHERE email = %s
+                            """, (
+                                novas_tentativas,
+                                ip_atual,
+                                email
+                            ))
+
                         else:
-                            cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+
+                            cursor.execute("""
+                                UPDATE usuario
+                                SET tentativas = %s
+                                WHERE email = %s
+                            """, (
+                                novas_tentativas,
+                                email
+                            ))
+
                         conn.commit()
-                    except Exception:
-                        try: conn.rollback()
-                        except: pass
 
-                    # Passo B: Salva o log burlando a trava do banco (Usando 1, 1, NULL)
+                    except Exception as e:
+
+                        print(
+                            f"[ERRO UPDATE TENTATIVAS]: {e}"
+                        )
+
+                        try:
+                            conn.rollback()
+                        except:
+                            pass
+
+                    # ==========================================
+                    # LOG DE TENTATIVA OU BLOQUEIO
+                    # ==========================================
                     try:
-                        cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
-                        res = cursor.fetchone()
-                        proximo_log = int(res['maior_log'] or 0) + 1
 
-                        if novas_tentativas >= 5:
-                            descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
-                        else:
-                            # O número da tentativa vai escrito no texto para segurança
-                            descricao = f"TENTATIVA_LOGIN: Falha de autenticacao para o e-mail: {email} (Tentativa {novas_tentativas}) em {agora}."
-
-                        # INSERÇÃO CÓPIA DO SUCESSO - O BD é obrigado a aceitar!
                         cursor.execute("""
-                            INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, %s, 1, 1, NULL)
-                        """, (proximo_log, descricao))
-                        conn.commit()
-                    except Exception:
-                        try: conn.rollback()
-                        except: pass
-                        
-                    # Retorna a tela correta dependendo do número de tentativas
-                    if novas_tentativas >= 5:
-                        return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
-                    else:
-                        return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
-            
-            # 3️⃣ CENÁRIO: O e-mail não existe (Log removido, exibe apenas a mensagem no site)
-            else:
-                return render_template('login.html', conta_inexistente=True, email_digitado=email, trava_demo=True)
+                            SELECT MAX(num_log) as maior_log
+                            FROM log_atividade
+                        """)
 
-    except Exception:
-        return render_template('login.html', db_error=True)
-        
+                        resultado = cursor.fetchone()
+
+                        proximo_log = int(
+                            resultado['maior_log'] or 0
+                        ) + 1
+
+                        if novas_tentativas >= 5:
+
+                            tipo_log = 2
+
+                            descricao = (
+                                f"BLOQUEIO: Conta suspensa "
+                                f"por excesso de tentativas "
+                                f"no e-mail: {email} "
+                                f"em {agora}."
+                            )
+
+                        else:
+
+                            tipo_log = 4
+
+                            descricao = (
+                                f"TENTATIVA_LOGIN: Falha "
+                                f"de autenticacao para "
+                                f"o e-mail: {email} "
+                                f"(Tentativa {novas_tentativas}) "
+                                f"em {agora}."
+                            )
+
+                        cursor.execute("""
+                            INSERT INTO log_atividade
+                            (
+                                num_log,
+                                descricao,
+                                id_status,
+                                id_tipo,
+                                num_tentativa
+                            )
+                            VALUES
+                            (
+                                %s,
+                                %s,
+                                1,
+                                %s,
+                                %s
+                            )
+                        """, (
+                            proximo_log,
+                            descricao,
+                            tipo_log,
+                            novas_tentativas
+                        ))
+
+                        conn.commit()
+
+                    except Exception as e:
+
+                        print(
+                            f"[ERRO LOG FALHA/BLOQUEIO]: {e}"
+                        )
+
+                        try:
+                            conn.rollback()
+                        except:
+                            pass
+
+                    if novas_tentativas >= 5:
+
+                        return render_template(
+                            'login.html',
+                            bloqueado=True,
+                            email_digitado=email,
+                            tentativas=novas_tentativas,
+                            trava_demo=True
+                        )
+
+                    return render_template(
+                        'login.html',
+                        senha_incorreta=True,
+                        email_digitado=email,
+                        tentativas=novas_tentativas,
+                        trava_demo=True
+                    )
+
+            # =====================================================
+            # E-MAIL NÃO EXISTE
+            # =====================================================
+            else:
+
+                try:
+
+                    cursor.execute("""
+                        SELECT MAX(num_log) as maior_log
+                        FROM log_atividade
+                    """)
+
+                    resultado = cursor.fetchone()
+
+                    proximo_log = int(
+                        resultado['maior_log'] or 0
+                    ) + 1
+
+                    agora = datetime.now(
+                        timezone('America/Sao_Paulo')
+                    ).strftime('%d/%m/%Y %H:%M:%S')
+
+                    descricao = (
+                        f"ACESSO_NEGADO: "
+                        f"A conta do e-mail [{email}] "
+                        f"nao pertence ao banco de dados "
+                        f"em {agora}."
+                    )
+
+                    cursor.execute("""
+                        INSERT INTO log_atividade
+                        (
+                            num_log,
+                            descricao,
+                            id_status,
+                            id_tipo,
+                            num_tentativa
+                        )
+                        VALUES
+                        (
+                            %s,
+                            %s,
+                            1,
+                            5,
+                            NULL
+                        )
+                    """, (
+                        proximo_log,
+                        descricao
+                    ))
+
+                    conn.commit()
+
+                except Exception as e:
+
+                    print(
+                        f"[ERRO LOG ACESSO NEGADO]: {e}"
+                    )
+
+                return render_template(
+                    'login.html',
+                    conta_inexistente=True,
+                    email_digitado=email,
+                    trava_demo=True
+                )
+
+    except Exception as e:
+
+        print(f"[ERRO LOGIN]: {e}")
+
+        return render_template(
+            'login.html',
+            db_error=True
+        )
+
     return render_template('login.html')
 # =========================================================================
 # === SUBSISTEMA DE CADASTRO E GERAÇÃO DE ASSINATURA DE SEGURANÇA ===
