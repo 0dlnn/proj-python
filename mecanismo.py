@@ -47,6 +47,9 @@ def login():
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
+            # =====================================================
+            # 1️⃣ CENÁRIO: O usuário existe
+            # =====================================================
             if user:
                 if user.get('id_status') == 2:
                     return render_template('login.html', bloqueado=True, email_digitado=email, trava_demo=True)
@@ -54,9 +57,39 @@ def login():
                 senha_digitada_bytes = senha.encode('utf-8')
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
                 
+                # --- LOGIN COM SUCESSO ---
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
+                    
+                    # POPULANDO A TABELA 'login' (Histórico de Acessos Avançado)
+                    try:
+                        if request.headers.getlist("X-Forwarded-For"):
+                            ip_origem = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
+                        else:
+                            ip_origem = request.remote_addr
+                            
+                        ua = request.user_agent
+                        so = ua.platform.capitalize() if ua.platform else "Dispositivo Desconhecido"
+                        nav = ua.browser.capitalize() if ua.browser else "Navegador Desconhecido"
+                        agente_usuario = f"{so} | {nav}"[:100]
+                        
+                        data_login = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
+                        
+                        cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
+                        prox_id_login = cursor.fetchone()['max_id'] + 1
+                        
+                        cursor.execute("""
+                            INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (prox_id_login, ip_origem, agente_usuario, user['num_usuario'], data_login))
+                        conn.commit()
+                    except Exception as e_login_tbl:
+                        print(f"[ERRO AO POPULAR TABELA LOGIN]: {e_login_tbl}")
+                        try: conn.rollback()
+                        except: pass
+
+                    # LOG DE ATIVIDADE (SUCESSO)
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
                         maior_log_atual = cursor.fetchone()['maior_log']
@@ -81,6 +114,7 @@ def login():
                         return redirect(url_for('admin_desbloqueio'))
                     return redirect('https://www.google.com')
                 
+                # --- SENHA ERRADA E BLOQUEIO ---
                 else:
                     novas_tentativas = (user['tentativas'] or 0) + 1
                     
@@ -91,17 +125,42 @@ def login():
                         
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                     
-                    if novas_tentativas >= 5:
-                        cursor.execute("""
-                            UPDATE usuario
-                            SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s
-                            WHERE email = %s
-                        """, (novas_tentativas, ip_atual, email))
-                        conn.commit()
-                    else:
-                        cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
-                        conn.commit()
+                    # Passo A: Atualiza a tabela usuario e popula a tabela bloqueio se necessário
+                    try:
+                        if novas_tentativas >= 5:
+                            # 1. Tranca o usuário
+                            cursor.execute("""
+                                UPDATE usuario
+                                SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s
+                                WHERE email = %s
+                            """, (novas_tentativas, ip_atual, email))
+                            conn.commit()
+                            
+                            # 2. POPULA A TABELA 'bloqueio'
+                            try:
+                                data_bloqueio = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
+                                motivo_bloqueio = "Bloqueio automático por excesso de tentativas falhas de senha."
+                                
+                                cursor.execute("SELECT COALESCE(MAX(num_bloqueio), 0) AS max_id FROM bloqueio")
+                                prox_id_bloqueio = cursor.fetchone()['max_id'] + 1
+                                
+                                cursor.execute("""
+                                    INSERT INTO bloqueio (num_bloqueio, data, num_tentativa, motivo)
+                                    VALUES (%s, %s, %s, %s)
+                                """, (prox_id_bloqueio, data_bloqueio, novas_tentativas, motivo_bloqueio))
+                                conn.commit()
+                            except Exception as e_tbl_bloqueio:
+                                print(f"[ERRO AO POPULAR TABELA BLOQUEIO]: {e_tbl_bloqueio}")
+                                try: conn.rollback()
+                                except: pass
+                        else:
+                            cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
+                            conn.commit()
+                    except Exception:
+                        try: conn.rollback()
+                        except: pass
                         
+                    # Passo B: Salva o log_atividade
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
                         maior_log_atual = cursor.fetchone()['maior_log']
@@ -126,6 +185,9 @@ def login():
                         return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
                     return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
+            # =====================================================
+            # 2️⃣ CENÁRIO: O e-mail não existe
+            # =====================================================
             else:
                 agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 try:
