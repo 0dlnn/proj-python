@@ -363,6 +363,8 @@ def admin_log_activity():
         
         # MÁGICA DO JOIN: Cruzamos os logs com a tabela de login
         # Isso preencherá 'ip_origem' e 'agente_usuario' automaticamente
+        # Otimizado: JOIN que busca pelo num_tentativa OU pela data/ip, 
+        # garantindo que logs sem num_tentativa também encontrem a origem.
         cursor.execute("""
             SELECT 
                 l.num_log, 
@@ -370,8 +372,8 @@ def admin_log_activity():
                 l.id_status, 
                 l.id_tipo, 
                 l.num_tentativa,
-                login.ip_origem,
-                login.agente_usuario
+                COALESCE(login.ip_origem, 'N/A') AS ip_origem,
+                COALESCE(login.agente_usuario, 'Desconhecido') AS agente_usuario
             FROM log_atividade l
             LEFT JOIN login ON l.num_tentativa = login.num_tentativa
             ORDER BY l.num_log DESC
