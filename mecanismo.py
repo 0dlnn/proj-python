@@ -45,6 +45,21 @@ def login():
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             
+            # --- CAPTURA CENTRALIZADA E CORRIGIDA ---
+            user_agent_string = request.headers.get('User-Agent')
+            ua = parse(user_agent_string)
+            so = ua.os.family if ua.os.family != 'Other' else "Sistema Indeterminado"
+            nav = ua.browser.family if ua.browser.family != 'Other' else "Navegador Indeterminado"
+            agente_usuario = f"{so} | {nav}"[:100]
+            
+            if request.headers.getlist("X-Forwarded-For"):
+                ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
+            else:
+                ip_atual = request.remote_addr
+            
+            data_hoje = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
+            # ----------------------------------------
+            
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
@@ -65,25 +80,13 @@ def login():
                     
                     # POPULANDO A TABELA 'login'
                     try:
-                        if request.headers.getlist("X-Forwarded-For"):
-                            ip_origem = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
-                        else:
-                            ip_origem = request.remote_addr
-                            
-                        ua = request.user_agent
-                        so = ua.platform.capitalize() if ua.platform else "Dispositivo Desconhecido"
-                        nav = ua.browser.capitalize() if ua.browser else "Navegador Desconhecido"
-                        agente_usuario = f"{so} | {nav}"[:100]
-                        
-                        data_login = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
-                        
                         cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
                         prox_id_login = cursor.fetchone()['max_id'] + 1
                         
                         cursor.execute("""
                             INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data)
                             VALUES (%s, %s, %s, %s, %s)
-                        """, (prox_id_login, ip_origem, agente_usuario, user['num_usuario'], data_login))
+                        """, (prox_id_login, ip_atual, agente_usuario, user['num_usuario'], data_hoje))
                         conn.commit()
                     except Exception as e_login_tbl:
                         print(f"[ERRO AO POPULAR TABELA LOGIN]: {e_login_tbl}")
@@ -119,18 +122,6 @@ def login():
                 else:
                     novas_tentativas = (user['tentativas'] or 0) + 1
                     
-                    # --- AQUI COMEÇA O ACRÉSCIMO FORENSE NA FALHA ---
-                    if request.headers.getlist("X-Forwarded-For"):
-                        ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
-                    else:
-                        ip_atual = request.remote_addr
-                    
-                    ua = request.user_agent
-                    so = ua.platform.capitalize() if ua.platform else "Dispositivo Desconhecido"
-                    nav = ua.browser.capitalize() if ua.browser else "Navegador Desconhecido"
-                    agente_usuario = f"{so} | {nav}"[:100]
-                    data_hoje = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
-                    
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
                         prox_id = cursor.fetchone()['max_id'] + 1
@@ -141,29 +132,21 @@ def login():
                         conn.commit()
                     except Exception as e:
                         print(f"Erro ao registrar tentativa forense: {e}")
-                    # --- AQUI TERMINA O ACRÉSCIMO ---
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                     
-                    # Passo A: Atualiza a tabela usuario e popula a tabela bloqueio se necessário
                     try:
                         if novas_tentativas >= 5:
-                            cursor.execute("""
-                                UPDATE usuario
-                                SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s
-                                WHERE email = %s
-                            """, (novas_tentativas, ip_atual, email))
+                            cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
                             conn.commit()
                             
-                            # POPULA A TABELA 'bloqueio'
                             try:
                                 data_bloqueio = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
                                 motivo_bloqueio = "5 tentativas de login frequente com senha incorreta"
                                 cursor.execute("""
                                     INSERT INTO bloqueio (num_bloqueio, data, num_tentativa, motivo)
                                     VALUES (%s, %s, %s, %s)
-                                    ON DUPLICATE KEY UPDATE 
-                                    data = VALUES(data), num_tentativa = VALUES(num_tentativa), motivo = VALUES(motivo)
+                                    ON DUPLICATE KEY UPDATE data = VALUES(data), num_tentativa = VALUES(num_tentativa), motivo = VALUES(motivo)
                                 """, (user['num_usuario'], data_bloqueio, novas_tentativas, motivo_bloqueio))
                                 conn.commit()
                             except Exception as e_tbl_bloqueio:
@@ -175,18 +158,13 @@ def login():
                         try: conn.rollback()
                         except: pass
                         
-                    # Passo B: Salva o log_atividade
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
                         maior_log_atual = cursor.fetchone()['maior_log']
                         proximo_log = maior_log_atual + 1
                         
-                        if novas_tentativas >= 5:
-                            descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}."
-                            id_tipo = 2
-                        else:
-                            descricao = f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
-                            id_tipo = 4
+                        id_tipo = 2 if novas_tentativas >= 5 else 4
+                        descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}." if novas_tentativas >= 5 else f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
                             
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
@@ -196,26 +174,10 @@ def login():
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
                         
-                    if novas_tentativas >= 5:
-                        return render_template('login.html', bloqueado=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
-                    return render_template('login.html', senha_incorreta=True, email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
+                    return render_template('login.html', bloqueado=(novas_tentativas >= 5), senha_incorreta=(novas_tentativas < 5), email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
-            # =====================================================
             # 2️⃣ CENÁRIO: O e-mail não existe
-            # =====================================================
             else:
-                # --- ACRÉSCIMO FORENSE PARA CONTA INEXISTENTE ---
-                if request.headers.getlist("X-Forwarded-For"):
-                    ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
-                else:
-                    ip_atual = request.remote_addr
-                
-                ua = request.user_agent
-                so = ua.platform.capitalize() if ua.platform else "Dispositivo Desconhecido"
-                nav = ua.browser.capitalize() if ua.browser else "Navegador Desconhecido"
-                agente_usuario = f"{so} | {nav}"[:100]
-                data_hoje = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
-                
                 try:
                     cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
                     prox_id = cursor.fetchone()['max_id'] + 1
@@ -225,8 +187,7 @@ def login():
                     """, (prox_id, ip_atual, agente_usuario, data_hoje))
                     conn.commit()
                 except Exception as e:
-                    print(f"Erro ao registrar tentativa forense inexistente: {e}")
-                # --- FIM DO ACRÉSCIMO ---
+                    print(f"Erro ao registrar tentativa inexistente: {e}")
 
                 agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 try:
