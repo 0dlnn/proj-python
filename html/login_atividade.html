@@ -39,8 +39,7 @@
                         <th>CATEGORIA</th>
                         <th>DESCRIÇÃO DA ATIVIDADE</th>
                         <th>STATUS</th>
-                        <th>Nº TENTATIVA</th>
-                    </tr>
+                        <th>ORIGEM DO ACESSO</th> </tr>
                 </thead>
                 <tbody>
                     {% if lista_logs %}
@@ -76,8 +75,17 @@
                                 {% endif %}
                             </td>
                             
-                            <td class="col-tentativa">
-                                {{ log.num_tentativa if log.num_tentativa else '-' }}
+                            <td class="col-forense">
+                                {% if log.agente_usuario %}
+                                    <div style="font-size: 10px; color: #aaa; margin-bottom: 2px;">
+                                        <i class="fa-solid fa-desktop"></i> {{ log.agente_usuario }}
+                                    </div>
+                                    <div style="font-size: 10px; color: #ffcc00;">
+                                        <i class="fa-solid fa-globe"></i> IP: {{ log.ip_origem }}
+                                    </div>
+                                {% else %}
+                                    <span style="color: #666; font-size: 10px;">-</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}

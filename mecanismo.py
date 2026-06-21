@@ -62,7 +62,7 @@ def login():
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
                     
-                    # POPULANDO A TABELA 'login' (Histórico de Acessos Avançado)
+                    # POPULANDO A TABELA 'login'
                     try:
                         if request.headers.getlist("X-Forwarded-For"):
                             ip_origem = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
@@ -118,17 +118,35 @@ def login():
                 else:
                     novas_tentativas = (user['tentativas'] or 0) + 1
                     
+                    # --- AQUI COMEÇA O ACRÉSCIMO FORENSE NA FALHA ---
                     if request.headers.getlist("X-Forwarded-For"):
                         ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
                     else:
                         ip_atual = request.remote_addr
-                        
+                    
+                    ua = request.user_agent
+                    so = ua.platform.capitalize() if ua.platform else "Dispositivo Desconhecido"
+                    nav = ua.browser.capitalize() if ua.browser else "Navegador Desconhecido"
+                    agente_usuario = f"{so} | {nav}"[:100]
+                    data_hoje = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
+                    
+                    try:
+                        cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
+                        prox_id = cursor.fetchone()['max_id'] + 1
+                        cursor.execute("""
+                            INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (prox_id, ip_atual, agente_usuario, user['num_usuario'], data_hoje))
+                        conn.commit()
+                    except Exception as e:
+                        print(f"Erro ao registrar tentativa forense: {e}")
+                    # --- AQUI TERMINA O ACRÉSCIMO ---
+                    
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                     
                     # Passo A: Atualiza a tabela usuario e popula a tabela bloqueio se necessário
                     try:
                         if novas_tentativas >= 5:
-                            # 1. Tranca o usuário
                             cursor.execute("""
                                 UPDATE usuario
                                 SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s
@@ -136,11 +154,10 @@ def login():
                             """, (novas_tentativas, ip_atual, email))
                             conn.commit()
                             
-                            # 2. POPULA A TABELA 'bloqueio' COM O ID DO USUÁRIO
+                            # POPULA A TABELA 'bloqueio'
                             try:
                                 data_bloqueio = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
-                                motivo_bloqueio = "Bloqueio automático por excesso de tentativas falhas de senha."
-                                
+                                motivo_bloqueio = "5 tentativas de login frequente com senha incorreta"
                                 cursor.execute("""
                                     INSERT INTO bloqueio (num_bloqueio, data, num_tentativa, motivo)
                                     VALUES (%s, %s, %s, %s)
@@ -150,8 +167,6 @@ def login():
                                 conn.commit()
                             except Exception as e_tbl_bloqueio:
                                 print(f"[ERRO AO POPULAR TABELA BLOQUEIO]: {e_tbl_bloqueio}")
-                                try: conn.rollback()
-                                except: pass
                         else:
                             cursor.execute("UPDATE usuario SET tentativas = %s WHERE email = %s", (novas_tentativas, email))
                             conn.commit()
@@ -159,7 +174,7 @@ def login():
                         try: conn.rollback()
                         except: pass
                         
-                    # Passo B: Salva o log_atividade (Enviando NULL no num_tentativa para não quebrar a Chave Estrangeira)
+                    # Passo B: Salva o log_atividade
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
                         maior_log_atual = cursor.fetchone()['maior_log']
@@ -310,7 +325,7 @@ def admin_usuarios():
 
     return render_template('usuario.html', lista=usuarios_banco)
 
-@app.route('/admin/log_atividade') # NOVA ROTA
+@app.route('/admin/log_atividade')
 def admin_log_activity():
     # === BARREIRA DE PRIVILÉGIO MÍNIMO (SÓ ENTRA SE FOR ADMIN) ===
     if 'user_id' not in session or int(session.get('perfil', 0)) != 1:
@@ -322,15 +337,24 @@ def admin_log_activity():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Busca os logs ordenando do mais recente para o mais antigo
+        # MÁGICA DO JOIN: Cruzamos os logs com a tabela de login
+        # Isso preencherá 'ip_origem' e 'agente_usuario' automaticamente
         cursor.execute("""
-            SELECT num_log, descricao, id_status, id_tipo, num_tentativa 
-            FROM log_atividade 
-            ORDER BY num_log DESC
+            SELECT 
+                l.num_log, 
+                l.descricao, 
+                l.id_status, 
+                l.id_tipo, 
+                l.num_tentativa,
+                login.ip_origem,
+                login.agente_usuario
+            FROM log_atividade l
+            LEFT JOIN login ON l.num_tentativa = login.num_tentativa
+            ORDER BY l.num_log DESC
         """)
         logs_banco = cursor.fetchall()
         
-        # ⚠️ IMPORTANTE: 'lista_logs' é a variável que o seu HTML vai ler no Jinja2 {% for log in lista_logs %}
+        # Agora 'lista_logs' contém também os dados forenses (IP e Agente)
         return render_template('login_atividade.html', lista_logs=logs_banco)
         
     except Exception as e:
@@ -338,7 +362,6 @@ def admin_log_activity():
         return render_template('login.html', db_error=True)
         
     finally:
-        # Garante que a conexão remota fecha mesmo se o fetchall falhar
         if cursor:
             try: cursor.close()
             except: pass
