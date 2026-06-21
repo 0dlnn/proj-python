@@ -372,8 +372,8 @@ def admin_log_activity():
                 l.id_status, 
                 l.id_tipo, 
                 l.num_tentativa,
-                COALESCE(login.ip_origem, 'N/A') AS ip_origem,
-                COALESCE(login.agente_usuario, 'Desconhecido') AS agente_usuario
+                login.ip_origem,
+                login.agente_usuario
             FROM log_atividade l
             LEFT JOIN login ON l.num_tentativa = login.num_tentativa
             ORDER BY l.num_log DESC
