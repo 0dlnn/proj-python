@@ -3,6 +3,7 @@ import mysql.connector
 from datetime import datetime
 import bcrypt  # <--- Biblioteca responsável por gerar hashes seguros de senha
 from pytz import timezone # <--- Trocado ZoneInfo por pytz
+from user_agents import parse
 
 app = Flask(__name__, template_folder='html', static_folder='css')
 app.secret_key = 'chave_secreta_para_seguranca'
@@ -362,9 +363,7 @@ def admin_log_activity():
         cursor = conn.cursor(dictionary=True)
         
         # MÁGICA DO JOIN: Cruzamos os logs com a tabela de login
-        # Isso preencherá 'ip_origem' e 'agente_usuario' automaticamente
-        # Otimizado: JOIN que busca pelo num_tentativa OU pela data/ip, 
-        # garantindo que logs sem num_tentativa também encontrem a origem.
+        # O LEFT JOIN garante que, mesmo que não haja correspondência, o log apareça.
         cursor.execute("""
             SELECT 
                 l.num_log, 
@@ -380,7 +379,8 @@ def admin_log_activity():
         """)
         logs_banco = cursor.fetchall()
         
-        # Agora 'lista_logs' contém também os dados forenses (IP e Agente)
+        # Agora o Flask envia os dados brutos. Se o JOIN falhar, 
+        # ip_origem e agente_usuario serão None (o que o seu HTML trata).
         return render_template('login_atividade.html', lista_logs=logs_banco)
         
     except Exception as e:
