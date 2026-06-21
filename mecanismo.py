@@ -377,7 +377,7 @@ def admin_log_activity():
             LEFT JOIN login ON l.num_tentativa = login.num_tentativa
             ORDER BY l.num_log DESC
         """)
-        logs_banco = cursor.fetchall()
+        logs_banco = cursor.fetchall() #atualizar
         
         # Agora o Flask envia os dados brutos. Se o JOIN falhar, 
         # ip_origem e agente_usuario serão None (o que o seu HTML trata).
