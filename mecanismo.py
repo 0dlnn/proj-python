@@ -203,6 +203,30 @@ def login():
             # 2️⃣ CENÁRIO: O e-mail não existe
             # =====================================================
             else:
+                # --- ACRÉSCIMO FORENSE PARA CONTA INEXISTENTE ---
+                if request.headers.getlist("X-Forwarded-For"):
+                    ip_atual = request.headers.getlist("X-Forwarded-For")[0].split(',')[0].strip()
+                else:
+                    ip_atual = request.remote_addr
+                
+                ua = request.user_agent
+                so = ua.platform.capitalize() if ua.platform else "Dispositivo Desconhecido"
+                nav = ua.browser.capitalize() if ua.browser else "Navegador Desconhecido"
+                agente_usuario = f"{so} | {nav}"[:100]
+                data_hoje = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
+                
+                try:
+                    cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
+                    prox_id = cursor.fetchone()['max_id'] + 1
+                    cursor.execute("""
+                        INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data)
+                        VALUES (%s, %s, %s, NULL, %s)
+                    """, (prox_id, ip_atual, agente_usuario, data_hoje))
+                    conn.commit()
+                except Exception as e:
+                    print(f"Erro ao registrar tentativa forense inexistente: {e}")
+                # --- FIM DO ACRÉSCIMO ---
+
                 agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                 try:
                     cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
