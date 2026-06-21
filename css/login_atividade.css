@@ -142,3 +142,12 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
 .sem-dados { text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic; padding: 30px !important; }
 .rodape-status { margin-top: 30px; font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
+
+/* ============================================================
+   NOVO: CLASSES FORENSES PARA ORIGEM DO ACESSO
+   ============================================================ */
+.col-forense { text-align: left; }
+.forense-info { font-size: 10px; margin-bottom: 2px; }
+.forense-agente { color: #aaa; }
+.forense-ip { color: #ffcc00; }
+.forense-vazio { color: #666; font-size: 10px; }

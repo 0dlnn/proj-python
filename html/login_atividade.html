@@ -39,7 +39,8 @@
                         <th>CATEGORIA</th>
                         <th>DESCRIÇÃO DA ATIVIDADE</th>
                         <th>STATUS</th>
-                        <th>ORIGEM DO ACESSO</th> </tr>
+                        <th>ORIGEM DO ACESSO</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% if lista_logs %}
@@ -77,14 +78,14 @@
                             
                             <td class="col-forense">
                                 {% if log.agente_usuario %}
-                                    <div style="font-size: 10px; color: #aaa; margin-bottom: 2px;">
+                                    <div class="forense-info forense-agente">
                                         <i class="fa-solid fa-desktop"></i> {{ log.agente_usuario }}
                                     </div>
-                                    <div style="font-size: 10px; color: #ffcc00;">
+                                    <div class="forense-info forense-ip">
                                         <i class="fa-solid fa-globe"></i> IP: {{ log.ip_origem }}
                                     </div>
                                 {% else %}
-                                    <span style="color: #666; font-size: 10px;">-</span>
+                                    <span class="forense-vazio">-</span>
                                 {% endif %}
                             </td>
                         </tr>
