@@ -264,6 +264,21 @@ def cadastro():
         if senha != repetir_senha:
             return "<h1>Senhas não coincidem!</h1><a href='/cadastro'>Voltar</a>"
 
+        # === VERIFICAÇÃO DE DUPLICIDADE (TRAVA DE UX) ===
+        # Valida se o e-mail ou CPF já existem no banco antes de prosseguir
+        try:
+            conn_verificacao = get_db_connection()
+            cursor_v = conn_verificacao.cursor(dictionary=True)
+            cursor_v.execute("SELECT num_usuario FROM usuario WHERE email = %s OR cpf = %s", (email, cpf))
+            if cursor_v.fetchone():
+                cursor_v.close()
+                conn_verificacao.close()
+                return "<h1>Erro: Este E-mail ou CPF já está cadastrado no sistema!</h1><a href='/cadastro'>Voltar</a>"
+            cursor_v.close()
+            conn_verificacao.close()
+        except Exception as e:
+            print(f"Erro na verificação de segurança: {e}")
+
         # === GERAÇÃO DE HASH DA SENHA COM SALT SECURITY ===
         # Passa a senha limpa recebida do formulário para bytes, gera um salt pseudo-aleatório
         # único e codifica a string resultante para armazenamento seguro e ininteligível.
