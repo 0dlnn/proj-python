@@ -110,10 +110,13 @@ def login():
                         agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
                         descricao = f"LOGIN: O usuario [{user['nome']}] ({email}) acessou a plataforma com sucesso em {agora}."
                         
+                        # 1. Primeiro você já tem o prox_id_login definido logo acima
+                        # 2. Agora, no INSERT do log_atividade, passe esse ID:
+
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, %s, 1, 1, NULL)
-                        """, (proximo_log, descricao))
+                            VALUES (%s, %s, 1, 1, %s) 
+                        """, (proximo_log, descricao, prox_id_login)) # <--- Alterado de NULL para o ID real
                         conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG SUCESSO]: {log_e}")
