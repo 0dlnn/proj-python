@@ -49,7 +49,15 @@ def login():
             user_agent_string = request.headers.get('User-Agent')
             ua = parse(user_agent_string)
             so = ua.os.family if ua.os.family != 'Other' else "Sistema Indeterminado"
-            nav = ua.browser.family if ua.browser.family != 'Other' else "Navegador Indeterminado"
+            
+            # Lógica refinada para detecção do Brave
+            if 'Brave' in user_agent_string:
+                nav = "Brave"
+            elif ua.browser.family != 'Other':
+                nav = ua.browser.family
+            else:
+                nav = "Navegador Indeterminado"
+                
             agente_usuario = f"{so} | {nav}"[:100]
             
             if request.headers.getlist("X-Forwarded-For"):
