@@ -177,10 +177,11 @@ def login():
                         id_tipo = 2 if novas_tentativas >= 5 else 4
                         descricao = f"BLOQUEIO: Conta suspensa por excesso de tentativas no e-mail: {email} em {agora}." if novas_tentativas >= 5 else f"TENTATIVA DE LOGIN: Falha de autenticacao para o e-mail: {email} em {agora}."
                             
+                        # ALTERAÇÃO AQUI:
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                            VALUES (%s, %s, 1, %s, NULL)
-                        """, (proximo_log, descricao, id_tipo))
+                            VALUES (%s, %s, 1, %s, %s)
+                        """, (proximo_log, descricao, id_tipo, prox_id)) # <--- Substituímos NULL por prox_id
                         conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
