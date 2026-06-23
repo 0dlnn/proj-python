@@ -210,9 +210,9 @@ def login():
                     descricao = f"ACESSO NEGADO: Tentativa com conta inexistente utilizando o e-mail: {email} em {agora}."
                     
                     cursor.execute("""
-                        INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
-                        VALUES (%s, %s, 1, 5, NULL)
-                    """, (proximo_log, descricao))
+                    INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
+                        VALUES (%s, %s, 1, %s, %s)
+                    """, (proximo_log, descricao, id_tipo, prox_id))
                     conn.commit()
                 except Exception as log_e:
                     print(f"[ERRO LOG INEXISTENTE]: {log_e}")
