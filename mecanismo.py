@@ -67,7 +67,7 @@ def login():
             
             data_hoje = datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
             # ----------------------------------------
-            
+            # vai consultar o e-mail para validação da existencia
             cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
             user = cursor.fetchone()
             
@@ -80,17 +80,18 @@ def login():
                 
                 senha_digitada_bytes = senha.encode('utf-8')
                 senha_banco_bytes = user['senha_hash'].encode('utf-8')
-                
+                # caso tenha acertado, ele reseta as tentativas
                 # --- LOGIN COM SUCESSO ---
                 if bcrypt.checkpw(senha_digitada_bytes, senha_banco_bytes):
                     cursor.execute("UPDATE usuario SET tentativas = 0 WHERE email = %s", (email,))
                     conn.commit()
                     
                     # POPULANDO A TABELA 'login'
+                    # Uso de COALESCE para transformar null em zero e não dar erro na contagem
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
                         prox_id_login = cursor.fetchone()['max_id'] + 1
-                        
+                        # insert into nos valores referente a tabela login
                         cursor.execute("""
                             INSERT INTO login (num_tentativa, ip_origem, agente_usuario, num_usuario, data)
                             VALUES (%s, %s, %s, %s, %s)
@@ -102,6 +103,7 @@ def login():
                         except: pass
 
                     # LOG DE ATIVIDADE (SUCESSO)
+                    # COALESCE transforma novamente o NULL em numero sequencial
                     try:
                         cursor.execute("SELECT COALESCE(MAX(num_log), 0) AS maior_log FROM log_atividade")
                         maior_log_atual = cursor.fetchone()['maior_log']
@@ -112,6 +114,8 @@ def login():
                         
                         # 1. Primeiro você já tem o prox_id_login definido logo acima
                         # 2. Agora, no INSERT do log_atividade, passe esse ID:
+
+                        # vai inserir o registro na tabela log atividade como falha o sucesso
 
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
@@ -130,6 +134,7 @@ def login():
                     return redirect('https://www.google.com')
                 
                 # --- SENHA ERRADA E BLOQUEIO ---
+                # notifica a log atividade sobre a atividade do usuario, registra suas informações
                 else:
                     novas_tentativas = (user['tentativas'] or 0) + 1
                     
@@ -145,7 +150,7 @@ def login():
                         print(f"Erro ao registrar tentativa forense: {e}")
                     
                     agora = datetime.now(timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
-                    
+                        # vai modificar a tabela, caso tenha erro e em sequencia vai bloquear, apos 5 tentativas
                     try:
                         if novas_tentativas >= 5:
                             cursor.execute("UPDATE usuario SET tentativas = %s, id_status = 2, ultimo_ip_bloqueio = %s WHERE email = %s", (novas_tentativas, ip_atual, email))
@@ -181,7 +186,7 @@ def login():
                         cursor.execute("""
                             INSERT INTO log_atividade (num_log, descricao, id_status, id_tipo, num_tentativa)
                             VALUES (%s, %s, 1, %s, %s)
-                        """, (proximo_log, descricao, id_tipo, prox_id)) # <--- Substituímos NULL por prox_id
+                        """, (proximo_log, descricao, id_tipo, prox_id)) 
                         conn.commit()
                     except Exception as log_e:
                         print(f"[ERRO LOG FALHA]: {log_e}")
@@ -189,6 +194,7 @@ def login():
                     return render_template('login.html', bloqueado=(novas_tentativas >= 5), senha_incorreta=(novas_tentativas < 5), email_digitado=email, tentativas=novas_tentativas, trava_demo=True)
             
             # 2️⃣ CENÁRIO: O e-mail não existe
+            # quando não bater a conferencia com o banco de dados, vai emitir um alerta na pagina de login
             else:
                 try:
                     cursor.execute("SELECT COALESCE(MAX(num_tentativa), 0) AS max_id FROM login")
@@ -207,6 +213,7 @@ def login():
                     maior_log_atual = cursor.fetchone()['maior_log']
                     proximo_log = maior_log_atual + 1
                     
+                    # vai avisar ao log atividade sobre a tentativa de utilizar e-mail errado
                     descricao = f"ACESSO NEGADO: Tentativa com conta inexistente utilizando o e-mail: {email} em {agora}."
                     
                     cursor.execute("""
@@ -289,7 +296,7 @@ def cadastro():
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+            # uso do curdate para registrar a data no qual está realizando o registo, popula o atributo da tabela cadastro
             # ESTRUTURA DML: Alinhamento de colunas para inserção segura no banco de dados
             sql = """INSERT INTO usuario (num_usuario, nome, email, senha_hash, cpf, telefone, perfil, id_status, data, ip_origem) 
                      VALUES (%s, %s, %s, %s, %s, %s, 0, 1, CURDATE(), %s)"""
@@ -340,7 +347,7 @@ def admin_usuarios():
 
 @app.route('/admin/log_atividade')
 def admin_log_activity():
-    # === BARREIRA DE PRIVILÉGIO MÍNIMO (SÓ ENTRA SE FOR ADMIN) ===
+    # === BARREIRA DE PRIVILÉGIO ENTRA SE FOR ADMINISTRADOR) ===
     if 'user_id' not in session or int(session.get('perfil', 0)) != 1:
         return redirect(url_for('login'))
         
@@ -350,8 +357,8 @@ def admin_log_activity():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # MÁGICA DO JOIN: Cruzamos os logs com a tabela de login
-        # O LEFT JOIN garante que, mesmo que não haja correspondência, o log apareça.
+        # Cruza os logs com a tabela de login utilizando JOIN
+        # O left join garante que, mesmo que não haja correspondência, o log apareça.
         cursor.execute("""
             SELECT 
                 l.num_log, 
@@ -368,7 +375,7 @@ def admin_log_activity():
         logs_banco = cursor.fetchall() #atualizar
         
         # Agora o Flask envia os dados brutos. Se o JOIN falhar, 
-        # ip_origem e agente_usuario serão None (o que o seu HTML trata).
+        # ip_origem e agente_usuario serão None (o que o HTML trata).
         return render_template('login_atividade.html', lista_logs=logs_banco)
         
     except Exception as e:
@@ -402,7 +409,7 @@ def buscar_ip_bloqueio():
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
+        # Consulta específica do último IP que causou o bloqueio de um usuário para exibição
         cursor.execute("SELECT ultimo_ip_bloqueio FROM usuario WHERE num_usuario = %s", (id_usuario,))
         resultado = cursor.fetchone()
         conn.close()
@@ -444,6 +451,7 @@ def finalizar_desbloqueio():
         proximo_id = maior_id_atual + 1  # Somamos 1 no Python mesmo!
         
         # === ETAPA 2: ATUALIZA O STATUS DO USUÁRIO ===
+        # tira a trava de segurança do banco de dados para fazer a modificação
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
         cursor.execute("""
             UPDATE usuario 
@@ -460,6 +468,7 @@ def finalizar_desbloqueio():
         """, (proximo_id, agora_banco, id_admin_logado, id_usuario)) # Trocado CURDATE() por agora_banco em string
         
         # === ETAPA 4: LOG DE ATIVIDADES (CALCULANDO O ID MANUAL PARA NÃO FALHAR) ===
+        # vai mostrar a quantidade de atividades na aba de log atividade
         try:
             cursor.execute("SELECT MAX(num_log) as maior_log FROM log_atividade")
             resultado_log = cursor.fetchone()
@@ -474,6 +483,7 @@ def finalizar_desbloqueio():
             """, (proximo_log, descricao_log)) # Adicionado proximo_log e corrigido o id_tipo para 3 (DESBLOQUEIO)
         except Exception as log_err:
             print(f"[AVISO LOG_ATIVIDADE]: Falha ao registrar na auditoria: {log_err}")
+            # bloqueia o sistema do banco de dados
 
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
         conn.commit()
