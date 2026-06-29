@@ -10,16 +10,9 @@
     <script>
         function copiarIP(ip) {
             if (ip && ip !== 'None' && ip !== 'IP DESCONHECIDO' && ip !== 'ATIVO') {
-                navigator.clipboard.writeText(ip);
-                
-                // Procura o campo pelo ID no formulário de desbloqueio
-                const campoIP = document.getElementById('campo_ip_desbloqueio');
-                if (campoIP) {
-                    campoIP.value = ip;
-                    alert("IP " + ip + " copiado e pronto para desbloqueio!");
-                } else {
-                    alert("IP " + ip + " copiado! (Campo de destino não encontrado no formulário)");
-                }
+                navigator.clipboard.writeText(ip).then(() => {
+                    alert("IP " + ip + " copiado para a área de transferência!");
+                });
             }
         }
     </script>
@@ -81,12 +74,18 @@
                              <div class="caixa-status">
                                 {% if u.id_status == 1 %}
                                     <span class="ponto-status ponto-ativo"></span>
-                                    <span class="texto-status" onclick="copiarIP('{{ u.ip_origem }}')" style="cursor: pointer; text-decoration: underline;">
+                                    <span class="texto-status" 
+                                          onclick="copiarIP('{{ u.ip_origem }}')" 
+                                          title="Clique para copiar" 
+                                          style="cursor: pointer; text-decoration: underline;">
                                         {{ u.ip_origem if u.ip_origem else 'ATIVO' }}
                                     </span>
                                 {% else %}
                                     <span class="ponto-status ponto-bloqueado"></span>
-                                    <span class="texto-status texto-bloqueado" onclick="copiarIP('{{ u.ultimo_ip_bloqueio }}')" style="cursor: pointer; text-decoration: underline;">
+                                    <span class="texto-status texto-bloqueado" 
+                                          onclick="copiarIP('{{ u.ultimo_ip_bloqueio }}')" 
+                                          title="Clique para copiar" 
+                                          style="cursor: pointer; text-decoration: underline;">
                                         {{ u.ultimo_ip_bloqueio if u.ultimo_ip_bloqueio else 'IP DESCONHECIDO' }}
                                     </span>
                                 {% endif %}
