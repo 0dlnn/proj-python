@@ -75,13 +75,13 @@
     <script>
     document.addEventListener("DOMContentLoaded", function() {
         
-        // --- FORÇA A EXIBIÇÃO DO MODAL QUANDO EXISTIR ERRO ---
+        //  força a exibição do modal quando der erro 
         const modal = document.getElementById('modalErro');
         if (modal) {
-            modal.style.display = 'flex'; // Força o container cinza/escuro a aparecer
+            modal.style.display = 'flex'; // força o container a aparecer
         }
         
-        // --- 1. LÓGICA DO BALÃO ---
+        // Balão de notificação quando houver algum erro
         const balao = document.querySelector('.balao-glass');
         const inputEmail = document.getElementById('inputEmail');
         const inputSenha = document.getElementById('inputSenha');
@@ -99,7 +99,7 @@
             }
         }
 
-        // --- PREPARAÇÃO DA TRAVA (Mais segura contra bugs de string) ---
+        // Preparação da trava quando for necessário
         const deveTravar = "{{ 'True' if trava_demo else 'False' }}"; 
         if (deveTravar === "True" && botaoLogin) {
             botaoLogin.disabled = true;
@@ -109,7 +109,7 @@
         }
     });
 
-    // --- 3. FUNÇÃO DE LIBERAÇÃO DE INTERFACE ---
+    // Botão de concordância 
     function liberarAcesso() {
         const modal = document.getElementById('modalErro');
         const email = document.getElementById('inputEmail');
@@ -126,7 +126,7 @@
             senha.focus();
         }
         
-        // --- TRAVA CRONOMETRADA DO BOTÃO ENTRAR ---
+        // Relogio para contrometrar o tempo de espera
         if (deveTravar === "True" && botaoLogin) {
             let contagem = 10;
             

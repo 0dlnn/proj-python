@@ -7,14 +7,28 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='usuario.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <script>
-        function copiarIP(ip) {
-            if (ip && ip !== 'None' && ip !== 'IP DESCONHECIDO' && ip !== 'ATIVO') {
-                navigator.clipboard.writeText(ip).then(() => {
-                    alert("IP " + ip + " copiado para a área de transferência!");
-                });
-            }
+    <<script>
+    function copiarIP(ip) {
+        // Limpa espaços extras que podem vir da renderização do Jinja
+        const ipLimpo = String(ip).trim();
+
+        if (ipLimpo && ipLimpo !== 'None' && ipLimpo !== 'IP DESCONHECIDO' && ipLimpo !== 'ATIVO') {
+            // Cria um campo de texto temporário
+            const tempInput = document.createElement("input");
+            tempInput.value = ipLimpo;
+            document.body.appendChild(tempInput);
+            
+            // Seleciona e copia
+            tempInput.select();
+            document.execCommand("copy");
+            
+            // Remove o campo
+            document.body.removeChild(tempInput);
+            
+            alert("IP " + ipLimpo + " copiado!");
         }
+    }
+</script>
     </script>
 </head>
 <body>

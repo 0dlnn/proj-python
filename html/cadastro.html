@@ -77,23 +77,23 @@
         // === SCRIPT DE INTERCEPTAÇÃO DE TECLADO: COMPLEMENTAÇÃO AUTOMÁTICA DE PONTOS E HÍFEN ===
         document.getElementById('idAutomatico').value = randomNum;
         function mascaraCPF(campo) {
-            // 1. Limpa qualquer entrada não numérica enviada para a caixa de texto
+            // Limpa qualquer entrada não numérica enviada para a caixa de texto
             let valor = campo.value.replace(/\D/g, "");
             
-            // 2. Aplica o primeiro ponto de separação após a primeira tríade de algarismos
+            // Aplica o primeiro ponto de separação após a primeira tríade de algarismos
             valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
             
-            // 3. Aplica o segundo ponto de separação após a segunda sequência de 3 números
+            // Aplica o segundo ponto de separação após a segunda sequência de 3 números
             valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
             
-            // 4. Aplica o hífen delimitador antes dos últimos 2 dígitos verificadores do documento
+            // Aplica o hífen delimitador antes dos últimos 2 dígitos verificadores do documento
             valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
             
-            // 5. cospe a string tratada de volta para renderização dinâmica no navegador
+            // retorna a string tratada de volta para renderização dinâmica no navegador
             campo.value = valor;
         }
 
-        // === NOVO: COMPLEMENTAÇÃO AUTOMÁTICA DE PARÊNTESES, ESPAÇO E TRAÇO DO TELEFONE ===
+        // completa automaticamente com espaço e parenteses no campo de telefone
         function mascaraTelefone(input) {
             let valor = input.value.replace(/\D/g, "");
             

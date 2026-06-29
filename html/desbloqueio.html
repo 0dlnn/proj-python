@@ -59,7 +59,7 @@
                 <input type="text" 
                        name="responsavel" 
                        id="responsavel" 
-                       placeholder="Sigla do Responsável (Ex: ADM, SUP)" 
+                       placeholder="Siga do ADM responsável" 
                        maxlength="10" 
                        required>
             </div>
@@ -73,7 +73,7 @@
     </div>
 
     <script>
-    // FUNÇÃO QUE BUSCA O IP NA ROTA PYTHON EM SEGUNDO PLANO
+    // Função que busca o IP no backend e banco de dados
     function buscarIP() {
         const idUsuario = document.getElementById('id_usuario').value.trim();
         const campoIP = document.getElementById('ip_identificado');
@@ -106,7 +106,7 @@
         });
     }
 
-    // FUNÇÃO DE VALIDAÇÃO ANTES DE ENVIAR O FORMULÁRIO (TRAVA DE SEGURANÇA)
+    // Função para validação antes de enviar o formulário, com trava de segurança
     function validarEnvio() {
         const ipValue = document.getElementById('ip_identificado').value.trim();
         

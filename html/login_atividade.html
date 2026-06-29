@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Core - Log de Atividades</title>
+    <title>Log de Atividades dos Usuários</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='login_atividade.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -92,7 +92,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="5" class="sem-dados">Nenhum registro de atividade encontrado na base Nexus.</td>
+                            <td colspan="5" class="sem-dados">Nenhum registro de atividade encontrado na base de dados.</td>
                         </tr>
                     {% endif %}
                 </tbody>
