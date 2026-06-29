@@ -6,6 +6,23 @@
     <title>Controle de Usuários</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='usuario.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        function copiarIP(ip) {
+            if (ip && ip !== 'None' && ip !== 'IP DESCONHECIDO' && ip !== 'ATIVO') {
+                navigator.clipboard.writeText(ip);
+                
+                // Procura o campo pelo ID no formulário de desbloqueio
+                const campoIP = document.getElementById('campo_ip_desbloqueio');
+                if (campoIP) {
+                    campoIP.value = ip;
+                    alert("IP " + ip + " copiado e pronto para desbloqueio!");
+                } else {
+                    alert("IP " + ip + " copiado! (Campo de destino não encontrado no formulário)");
+                }
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -46,7 +63,8 @@
                         <th>E-MAIL</th>
                         <th>TIPO PERFIL</th>
                         <th>STATUS / RASTREIO</th>
-                        <th>SIGLA ADMIN</th> </tr>
+                        <th>SIGLA ADMIN</th> 
+                    </tr>
                 </thead>
                 <tbody>
                     {% for u in lista %}
@@ -61,18 +79,18 @@
                         </td>
                         <td>
                              <div class="caixa-status">
-                                    {% if u.id_status == 1 %}
+                                {% if u.id_status == 1 %}
                                     <span class="ponto-status ponto-ativo"></span>
-                                    <span class="texto-status">
+                                    <span class="texto-status" onclick="copiarIP('{{ u.ip_origem }}')" style="cursor: pointer; text-decoration: underline;">
                                         {{ u.ip_origem if u.ip_origem else 'ATIVO' }}
                                     </span>
                                 {% else %}
                                     <span class="ponto-status ponto-bloqueado"></span>
-                                    <span class="texto-status texto-bloqueado">
+                                    <span class="texto-status texto-bloqueado" onclick="copiarIP('{{ u.ultimo_ip_bloqueio }}')" style="cursor: pointer; text-decoration: underline;">
                                         {{ u.ultimo_ip_bloqueio if u.ultimo_ip_bloqueio else 'IP DESCONHECIDO' }}
                                     </span>
                                 {% endif %}
-                            </div>
+                             </div>
                         </td>
                         <td class="texto-branco" style="text-align: center; font-weight: bold; letter-spacing: 1px;">
                             {{ u.responsavel_desbloqueio if u.responsavel_desbloqueio else '-' }}
